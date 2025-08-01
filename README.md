@@ -5,4 +5,4 @@ V naslednjih verzijah prihajajo še popravki hroščev, podpora za numpy sezname
 Pyplot:  
 <img width="500" height="402" alt="image" src="https://github.com/user-attachments/assets/395302bd-e866-4787-8e8b-1081845530cb" />  
 Pgf:  
-<img width="525" height="402" alt="image" src="https://github.com/user-attachments/assets/6ade49c5-6e1a-4910-a2de-c1b52af25dc0" />
+<img width="500" height="380" alt="image" src="https://github.com/user-attachments/assets/6ade49c5-6e1a-4910-a2de-c1b52af25dc0" />

@@ -27,16 +27,21 @@ def export_graph(final, _graph_arguments, _plots):
 
 ConvertStyle = False # experimental
 
-print("Python file with plot to convert: ")
-inp = input()
-path = re.sub(r"\\", r"/", inp)
-#print("Try converting settings (experimental, should work on simple setups without logic and loops, one plt.show()/plt.savefig())? [y/N]:")
-#if "y" in input().lower():
-#    ConvertStyle = True
 
 file = []
-with open(path, "r") as f:
-    file = f.readlines()
+print("Python file with plot(s) to convert (you may drag it in here): ")
+while len(file) == 0:
+    inp = input()
+    path = re.sub(r"\\", r"/", inp)
+
+    if path.split(".")[-1] != "py":
+        print("Not .py file. Try again:")
+        continue
+    try:
+        with open(path, "r") as f:
+            file = f.readlines()
+    except:
+        print("Error reading your file. Try again:")
 
 file.insert(0, "_datas = []\n_cmds = {}\n_cmds_list = []")
 i = 1
@@ -108,7 +113,8 @@ try:
     default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true,1000 sep={" + th_sep + r"},dec sep={" + decimal_sep + r"}]{\tick}}"
 except: None
 
-anchor_map = {"top": "north", "bottom": "south", "left": "west", "right": "east", "center": "center"}
+anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "south", "left": "west", "right": "east", "center": "center"}
+legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
 
 legend = False
 def find_def(k, vals):
@@ -122,19 +128,17 @@ def find_def(k, vals):
             v = vals[0]
             s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
             output[k[0]+s]=v[1]
-    elif "legend" in k:
-        global legend
-        legend = True
-        #print("Legend position? (use decimal dot (.))")
-        #print("x/width: ")
-        #x = input()
-        #print("y/height: ")
-        #y = input()
-        #print("Anchor(e.g north east): ")
-        #anc = input()
-        #k = "legend style"
-        #v = r"{at={(" + f"{x},{y}" + r")}, anchor=" + anc + r"}"
-        #output[k] = v
+    if str(k) in ["xticks", "yticks"]:
+        tck = str(k).removesuffix("s")
+        tns = ",".join([str(q).strip() for q in str(vals[0]).replace("[", r"{").replace("]", r"}").split(",")])
+        if len(tns) < 3:
+            tns = r"\empty"
+        output[tck] = tns
+        if len(vals) == 2:
+            tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
+            output[tck + "labels"] = r"{" + tls + r"}"
+
+
     else:
         for v in vals:
             if "title" in k:
@@ -143,7 +147,7 @@ def find_def(k, vals):
                         output["title style"] = r"{align=" + v[1] + r"}"
                 else:
                     output["title"] = r"{" + v + r"}"
-            elif k.strip() in ["ylabel", "xlabel"]:
+            elif str(k).strip() in ["ylabel", "xlabel"]:
                 if isinstance(v, tuple):
                     if "loc" in v[0]:
                         output[f"{k} style"] = r"{anchor=" + anchor_map[v[1]] + r"}"
@@ -153,7 +157,7 @@ def find_def(k, vals):
                 if v.strip() == "True":
                     v = "both"
                 output[k] = v
-            elif k.strip() == "figure":
+            elif str(k).strip() == "figure":
                 if v[0].strip() == "figsize":
                     dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
                     w, h = float(dims.group(1)), float(dims.group(2))
@@ -163,6 +167,35 @@ def find_def(k, vals):
                     h *= 2
                 output["width"] = f"{w:.2f}cm"
                 output["height"] = f"{h:.2f}cm"
+            elif "legend" == str(k).strip():
+                global legend
+                legend = True
+                if str(v[0]).strip() == "loc":
+                    if str(v[1]).strip == "best":
+                        continue
+                    if "(" in v[1]:
+                        tup = re.search(r"\(\s*([\d\.]+)\s*,\s*([\d\.]+)\s*\)", v[1]).groups()
+                        if len(tup) == 2:
+                            lx, ly = tup[0], tup[1]
+                        posit = "south west"
+                    else:
+                        if len(v[1]) < 3:
+                            try:
+                                v[1] = int(v[1])
+                            except: continue
+                            v[1] = legend_pos_map[v[1]]
+                        posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
+                        border = 0.03
+                        lx, ly = 0.5, 0.5
+                        if "north" in posit:
+                            ly = 1 - border
+                        elif "south" in posit:
+                            ly = border
+                        if "west" in posit:
+                            lx = border
+                        elif "east" in posit:
+                            lx = 1 - border                    
+                    output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"}"                    
 
     return output
 
@@ -201,6 +234,8 @@ while datas:
     label = ""
     ptype = p.pop(0)
     style = []
+    mark_size = -1
+    mark = ""
     for arg in p[2:]:
         if isinstance(arg, tuple):
             st = arg[0]
@@ -212,23 +247,32 @@ while datas:
                     style.append(f"opacity={v}")
                 elif "marker" == str(k).strip():
                     marker = next((marker_map[m] for m in arg if m in marker_map), "*")
-                    style.append(f"mark={marker}")
+                    if "." in str(arg) and mark_size == -1:
+                        mark_size = 1 
+                    mark = marker
                 elif "linewidth" in k:
                     style.append(f"line width={v}pt")
                 elif "markersize" in k:
-                    style.append(f"mark size={v/2:.2f}pt")
+                    mark_size = f"{v/2:.f}"
                 elif "color" in k:
                     col = hex_to_pgf(v)
         else:
             color = next((color_map[c] for c in arg if c in color_map), None)
             marker = next((marker_map[m] for m in arg if m in marker_map), None)
+            if "." in str(arg) and mark_size == -1:
+                mark_size = 1 
             line = next((line_map[m] for m in line_map if m in arg), None)
             if color:
                 col = color
             if marker:
-                style.append(f"mark={marker}")
+                mark = marker
             if line:
                 style.append(f"{line}")
+    if mark:
+        style.append(f"mark={mark}")
+        if mark_size == -1:
+            mark_size = 2
+        style.append(f"mark size={mark_size} pt")
     if col == None:
         col = hex_to_pgf(default_colors[dci.count(ptype)])
         dci.append(ptype)

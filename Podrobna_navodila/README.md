@@ -22,6 +22,14 @@ Nekatere (še) nepodprte nastavitve:
 - dvojne osi,
 - več grafov na eni sliki,
 - 3D grafi,
+- barvne sheme,
 - ...
 
 Opažene napake in predloge lahko javite v GitHubov Issues tega projekta.
+
+Demonstarcijski primer (privzete barve):
+
+
+<img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
+
+<img width="1000" height="651" alt="image" src="https://github.com/user-attachments/assets/9387f394-8412-4079-a6a0-c521b448fd4c" />

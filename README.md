@@ -1,8 +1,3 @@
 Ta program omogoča enostavno pretvorbo **matplotlib.pyplot** grafa v **pgfplots** graf. Zavedam se, da zato obstaja že zelo napredna knjižnica *tikzplotlib*, vendar ima svoje pomanjklivosti in ne deluje "out of the box" na Python kodi za graf, saj paket ni več vzdrževan in ga je najprej treba ročno popraviti ([rešitev](https://stackoverflow.com/a/78949249)). Zato ponujam svojo preprosto alternativo. Ker argumente plt.xxx() podajamo kot spremenljivke, je program zasnovan tako, da uporabljene spremenljivke eksplicitno shrani in jih uporabi pri pretvorbi. Prav tako upošteva osnovne stile (barva, črtkana črta, markerji, debelina, dimenzije, prosojnost) ter anotacije (naslov, osi (z limitami), legenda (zaenkrat ročna nastavitev lokacije)). Nekateri elementi med seboj niso v merilu, saj pyplot uporablja različna merila (tudi privzete nastavitve se razlikujejo). Če imate v eno Python kodo za več grafov, vam naredi več datotek (za vsak plt.show() in plt.savefig()).  
-Za poganjanje programa potrebujete Pythonov modul *astor* (pip install astor). Poleg tega morate za grafe, ki podatke črpajo iz zunanjih datotek preko relativne poti paziti, da ste v pravem direktoriju (cd *path_to_directory*).  
+Za poganjanje programa potrebujete Pythonov modul *astor* (pip install astor) podrobna navodila spodaj. Poleg tega morate za grafe, ki podatke črpajo iz zunanjih datotek preko relativne poti paziti, da ste v pravem direktoriju (cd *path_to_directory*).  
 V naslednjih verzijah prihajajo še popravki hroščev, dodatne nastavitve (mreže, lokacij) itd. Konstruktivni predlogi za popravke bistvenih napak/pomanjklivosti so dobrodošli.
-  
-Pyplot:  
-<img width="500" height="402" alt="image" src="https://github.com/user-attachments/assets/395302bd-e866-4787-8e8b-1081845530cb" />  
-Pgf:  
-<img width="500" height="380" alt="image" src="https://github.com/user-attachments/assets/6ade49c5-6e1a-4910-a2de-c1b52af25dc0" />

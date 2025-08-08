@@ -32,6 +32,8 @@ Demonstarcijski primer (privzete barve):
 
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
-<img width="1000" height="624" alt="image" src="https://github.com/user-attachments/assets/03328eac-eb3c-41aa-a71d-2cfbada92563" />
+<img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
+
 
 

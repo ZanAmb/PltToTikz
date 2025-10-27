@@ -1,4 +1,4 @@
-# v0.3 development
+# v0.4 development
 
 import re
 import ast      # pip install astor
@@ -22,31 +22,35 @@ def export_graph(final, _graph_arguments, _plots):
     if not (final and count == 0):
         name = count
         count += 1
-    with open(path.replace(".py", f"{name}.tex"), "w") as f:
+    with open(path.replace(".py", f"{name}.tikz"), "w") as f:
         f.write(tikz_code)
 
-ConvertStyle = False # experimental
-
+dev_mode = False
 
 file = []
-print("Python file with plot(s) to convert (you may drag it in here): ")
-while len(file) == 0:
-    inp = input()
-    path = re.sub(r"\\", r"/", inp)
-
-    if path.split(".")[-1] != "py":
-        print("Not .py file. Try again:")
-        continue
-    try:
-        with open(path, "r") as f:
-            file = f.readlines()
-    except:
-        print("Error reading your file. Try again:")
+if dev_mode:
+    path = "./test_plot.py"
+    with open(path, "r") as f:
+        file = f.readlines()
+else:
+    print("Python file with plot(s) to convert (on WinOS you may drag it in here): ")
+    while len(file) == 0:
+        inp = input()
+        path = re.sub(r"\\", r"/", inp)
+    
+        if path.split(".")[-1] != "py":
+            print("Not a .py file. Try again:")
+            continue
+        try:
+            with open(path, "r") as f:
+                file = f.readlines()
+        except:
+            print("Error reading your file. Try again:")
 
 file.insert(0, "_datas = []\n_cmds = {}\n_cmds_list = []")
 i = 1
 while i < len(file):
-    if any(f"plt.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot"]):
+    if any(f"plt.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar"]):
         tree = ast.parse(file[i].strip())
         call = tree.body[0].value
         args = [ast.unparse(arg) for arg in call.args]
@@ -120,14 +124,16 @@ legend = False
 def find_def(k, vals):
     output = {}
     if "lim" in k:
-        if len(vals) == 2:
-            sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
-            output[sp]=vals[0]
-            output[zg]=vals[1]
+        if isinstance(vals[0], tuple):
+            for v in vals:
+                s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
+                output[k[0]+s]=v[1]
         else:
-            v = vals[0]
-            s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
-            output[k[0]+s]=v[1]
+            sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
+            output[sp], output[zg] = vals[0].strip("()").split(", ")
+    if "legend" == str(k).strip():
+        global legend
+        legend = True
     if str(k) in ["xticks", "yticks"]:
         tck = str(k).removesuffix("s")
         tns = ",".join([str(q).strip() for q in str(vals[0]).replace("[", r"{").replace("]", r"}").split(",")])
@@ -137,8 +143,6 @@ def find_def(k, vals):
         if len(vals) == 2:
             tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
             output[tck + "labels"] = r"{" + tls + r"}"
-
-
     else:
         for v in vals:
             if "title" in k:
@@ -168,8 +172,6 @@ def find_def(k, vals):
                 output["width"] = f"{w:.2f}cm"
                 output["height"] = f"{h:.2f}cm"
             elif "legend" == str(k).strip():
-                global legend
-                legend = True
                 if str(v[0]).strip() == "loc":
                     if str(v[1]).strip == "best":
                         continue
@@ -236,29 +238,66 @@ while datas:
     style = []
     mark_size = -1
     mark = ""
+    ad_col = {}
+    xfe, yfe = 0, 0
     for arg in p[2:]:
         if isinstance(arg, tuple):
-            st = arg[0]
-            if "label" in st:
-                label = arg[1]
-            else:
-                k, v = arg[0], arg[1]
-                if "alpha" in k:
-                    style.append(f"opacity={v}")
-                elif "marker" == str(k).strip():
-                    marker = next((marker_map[m] for m in arg if m in marker_map), "*")
-                    if "." in str(arg) and mark_size == -1:
-                        mark_size = 1 
-                    mark = marker
-                elif "linewidth" in k:
-                    style.append(f"line width={v}pt")
-                elif "markersize" in k:
-                    mark_size = f"{v/2:.f}"
-                elif "color" in k:
-                    col = hex_to_pgf(v)
+            k, v = str(arg[0]).strip(), arg[1]
+            if "label" in k:
+                label = v
+            elif "alpha" in k:
+                style.append(f"opacity={v}")
+            elif "marker" == k:
+                marker = next((marker_map[m] for m in arg if m in marker_map), "*")
+                if "." in str(arg) and mark_size == -1:
+                    mark_size = 1 
+                mark = marker
+            elif "linewidth" in k:
+                style.append(f"line width={v}pt")
+            elif "markersize" in k:
+                mark_size = f"{v/2:.f}"
+            elif "color" in k:
+                if v in color_map.keys():
+                    col = color_map[v]
+                elif v in color_map.values():
+                    col = v
+                elif str(v).strip()[0] == "#":
+                    try:
+                        col = hex_to_pgf(v)
+                    except:
+                        print("Bad color:", v)
+                else:
+                    c = list(str(v).strip("( )").split(", "))
+                    while len(c) < 3:
+                        c.append(c[0])
+                    col = r"{rgb:" + f"red,{float(c[0])*255:.2f};green,{float(c[1])*255:.2f};blue,{float(c[2])*255:.2f}" + r"}"
+            elif "err" in k:
+                ax = k[0]
+                try:
+                    if ax == "x":
+                        xfe = float(v)
+                    elif ax == "y":
+                        yfe = float(v)
+                except:
+                    subs = v.strip("[]").split("], [")
+                    print(subs)
+                    if len(subs) == 1:
+                        descriptor = f"{ax} error"
+                        ad_col[descriptor] = subs[0].split(",")
+                    else:
+                        descriptor = f"{ax} error minus"
+                        ad_col[descriptor] = subs[0].split(",") # prvi
+                        descriptor = f"{ax} error plus"
+                        ad_col[descriptor] = subs[1].split(",") #drugi
+
         else:
-            color = next((color_map[c] for c in arg if c in color_map), None)
-            marker = next((marker_map[m] for m in arg if m in marker_map), None)
+            if arg in color_map.values():
+                color = arg
+                marker = False
+            else:
+                print(arg)
+                color = next((color_map[c] for c in arg if c in color_map), None)
+                marker = next((marker_map[m] for m in arg if m in marker_map), None)
             if "." in str(arg) and mark_size == -1:
                 mark_size = 1 
             line = next((line_map[m] for m in line_map if m in arg), None)
@@ -281,11 +320,28 @@ while datas:
         style.append("only marks")
     if ptype == "stackplot":
         style.append(f"fill={col}")
-    style = ", ".join(style)
-    plots += f"\n\\addplot [{style}] coordinates {{\n"
-    x,y = p[0], p[1]
+    if ptype == "errorbar":
+        error_string = r"error bars/.cd," + "\n"
+        error_string += f"x dir=both, x fixed={xfe},\n" if xfe else "x dir=both, x explicit,\n"  
+        error_string += f"x dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"  
+        style.append(error_string)
+    style = ",\n".join(style)
+    x = ["x"] + list(p[0])
+    y = ["y"] + list(p[1])
+    plot_points = [x,y]
+    ad_spec = ""
+    for ac in ad_col.keys():
+        ad_spec += f", {ac}={ac.replace(" ", "")}"
+        pts = [ac.replace(" ", "")] + list(ad_col[ac])
+        plot_points.append(pts)
+    plots += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{\n"
     for i in range(len(x)):
-        plots += f"\t({x[i]}, {y[i]})\n"
+        for j in range(len(plot_points)):
+            try:
+                plots += "\t" + str(plot_points[j][i])
+            except:
+                plots += "\t"
+        plots += "\n"
     plots += "};\n"
     if len(label) > 0 and legend:
         plots += f"\\addlegendentry{{{label}}}"

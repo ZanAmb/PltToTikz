@@ -318,7 +318,7 @@ while datas:
             mark_size = 2
         style.append(f"mark size={mark_size} pt")
     if col == None:
-        col = hex_to_pgf(default_colors[dci.count(ptype)])
+        col = hex_to_pgf(default_colors[len(dci)]) # ALTN: dci.count(ptype)
         dci.append(ptype)
     style.append(f"color={col}")
     if ptype == "scatter":

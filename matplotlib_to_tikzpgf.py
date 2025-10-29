@@ -280,7 +280,6 @@ while datas:
                         yfe = float(v)
                 except:
                     subs = v.strip("[]").split("], [")
-                    print(subs)
                     if len(subs) == 1:
                         descriptor = f"{ax} error"
                         ad_col[descriptor] = subs[0].split(",")
@@ -295,7 +294,6 @@ while datas:
                 color = arg
                 marker = False
             else:
-                print(arg)
                 color = next((color_map[c] for c in arg if c in color_map), None)
                 marker = next((marker_map[m] for m in arg if m in marker_map), None)
             if "." in str(arg) and mark_size == -1:

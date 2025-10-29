@@ -181,9 +181,9 @@ def find_def(k, vals):
                     else:
                         if len(v[1]) < 3:
                             try:
-                                v[1] = int(v[1])
+                                v = (v[0],int(v[1]))
                             except: continue
-                            v[1] = legend_pos_map[v[1]]
+                            v = (v[0], legend_pos_map[v[1]])
                         posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
                         border = 0.03
                         lx, ly = 0.5, 0.5
@@ -211,7 +211,7 @@ for cmds in cmds_list:
     graph_arguments = graph_arguments.removesuffix(",\n")
     gas_list.append(graph_arguments)
 
-color_map = {'b':'blue', 'g':'green', 'r':'red', 'c':'cyan', 'm':'magenta', 'y':'yellow', 'k':'black', 'w':'white'}
+color_map = {'b':'blue', 'g':'green', 'r':'red', 'c':'cyan', 'm':'magenta', 'y':'yellow', 'k':'black', 'w':'white', "orange":"orange"}
 marker_map = {'o':'*', ".": "*", 's':'square*', '^':'triangle', 'v':'triangle*', 'd':'diamond', '+':'+', 'x':'x', '*':'star'}
 line_map = {"--": "dashed", ":": "dotted", "-.": "dashdot"}
 default_colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
@@ -280,19 +280,27 @@ while datas:
                     subs = v.strip("[]").split("], [")
                     if len(subs) == 1:
                         descriptor = f"{ax} error"
-                        ad_col[descriptor] = subs[0].split(",")
+                        if "," in subs[0]:
+                            ad_col[descriptor] = subs[0].split(",")
+                        else:
+                            ad_col[descriptor] = subs[0].split(",")
                     else:
                         descriptor = f"{ax} error minus"
-                        ad_col[descriptor] = subs[0].split(",") # prvi
+                        if "," in subs[0]:
+                            ad_col[descriptor] = subs[0].split(",")
+                        else:
+                            ad_col[descriptor] = subs[0].split()
                         descriptor = f"{ax} error plus"
-                        ad_col[descriptor] = subs[1].split(",") #drugi
+                        if "," in subs[1]:
+                            ad_col[descriptor] = subs[1].split(",")
+                        else:
+                            ad_col[descriptor] = subs[1].split()
 
         else:
             if arg in color_map.values():
                 color = arg
                 marker = False
             else:
-                print(arg)
                 color = next((color_map[c] for c in arg if c in color_map), None)
                 marker = next((marker_map[m] for m in arg if m in marker_map), None)
             if "." in str(arg) and mark_size == -1:

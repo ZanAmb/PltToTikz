@@ -143,6 +143,8 @@ def find_def(k, vals):
         if len(vals) == 2:
             tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
             output[tck + "labels"] = r"{" + tls + r"}"
+    elif k == "grid":
+        output[k] = "both"
     else:
         for v in vals:
             if "title" in k:
@@ -157,10 +159,6 @@ def find_def(k, vals):
                         output[f"{k} style"] = r"{anchor=" + anchor_map[v[1]] + r"}"
                 else:
                     output[k] = r"{" + v + r"}"
-            elif k == "grid":
-                if v.strip() == "True":
-                    v = "both"
-                output[k] = v
             elif str(k).strip() == "figure":
                 if v[0].strip() == "figsize":
                     dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
@@ -294,6 +292,7 @@ while datas:
                 color = arg
                 marker = False
             else:
+                print(arg)
                 color = next((color_map[c] for c in arg if c in color_map), None)
                 marker = next((marker_map[m] for m in arg if m in marker_map), None)
             if "." in str(arg) and mark_size == -1:

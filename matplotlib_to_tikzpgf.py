@@ -196,7 +196,6 @@ def find_def(k, vals):
                         elif "east" in posit:
                             lx = 1 - border                    
                     output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"}"                    
-
     return output
 
 gas_list = []
@@ -252,6 +251,13 @@ while datas:
                 mark = marker
             elif "linewidth" in k:
                 style.append(f"line width={v}pt")
+            elif "linestyle" in k:
+                if v == "":
+                    style.append("only marks")
+                elif v in line_map.keys():
+                    style.append(line_map[v])
+                elif v in line_map.values():
+                    style.append(v)
             elif "markersize" in k:
                 mark_size = f"{v/2:.f}"
             elif "color" in k:

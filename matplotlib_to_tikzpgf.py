@@ -289,7 +289,7 @@ while datas:
                         if "," in subs[0]:
                             ad_col[descriptor] = subs[0].split(",")
                         else:
-                            ad_col[descriptor] = subs[0].split(",")
+                            ad_col[descriptor] = subs[0].split()
                     else:
                         descriptor = f"{ax} error minus"
                         if "," in subs[0]:

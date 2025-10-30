@@ -49,13 +49,20 @@ else:
 
 file.insert(0, "_datas = []\n_cmds = {}\n_cmds_list = []")
 i = 1
+plt_name = "plt"
 while i < len(file):
-    if any(f"plt.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar"]):
+    if "import matplotlib.pyplot" in file[i]:
+        q = file[i].split(" as ")
+        plt_name = q[1].strip()
+    elif f"{plt_name}.subplots" in file[i]:
+        list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=" + plt_name + r"\s*\.subplots\((.*)\)\s*$", file[i]).groups())
+
+    elif any(f"{plt_name}.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar"]):
         tree = ast.parse(file[i].strip())
         call = tree.body[0].value
         args = [ast.unparse(arg) for arg in call.args]
         kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
-        spaces = list(re.search(r"^([\s\#]*)plt\.([\w]+)\(", file[i]).groups())
+        spaces = list(re.search(r"^([\s\#]*)" + plt_name + r"\.([\w]+)\(", file[i]).groups())
         ptype = spaces[-1]
         if len(spaces) == 2:
             spaces = spaces[0]
@@ -72,8 +79,8 @@ while i < len(file):
         controls = controls.removesuffix(", ")
         file.insert(i, spaces + f"_datas.append([\"{ptype}\", {x}, {y}, {controls}])")
         i += 1
-    elif "plt.show()" in file[i] or "plt.savefig(" in file[i]:
-        spaces = re.search(r"^([\s\#]*)plt\.", file[i]).groups()
+    elif f"{plt_name}.show()" in file[i] or f"{plt_name}.savefig(" in file[i]:
+        spaces = re.search(r"^([\s\#]*)" + plt_name + r"\.", file[i]).groups()
         if spaces:
             spaces = spaces[0]
         else:
@@ -81,8 +88,8 @@ while i < len(file):
         file.insert(i, spaces + f"_cmds_list.append(_cmds.copy())")
         file.insert(i, spaces + f"_datas.append([\"end\"])")
         i += 2
-    elif "plt." in file[i]:
-        groups = re.search(r"^([\s\#]*)plt\.([\w]+)\((.*)\)$", file[i])
+    elif f"{plt_name}." in file[i]:
+        groups = re.search(r"^([\s\#]*)" + plt_name + r"\.([\w]+)\((.*)\)$", file[i])
         if groups:
             spaces, cmd, fargs = groups.group(1), groups.group(2), groups.group(3)
             tree = ast.parse(f"f({fargs})")
@@ -108,7 +115,7 @@ exec(file, namespace)
 datas = namespace["_datas"]
 #cmds = namespace["_cmds"]
 cmds_list = namespace["_cmds_list"]
-rcP = namespace["plt"].rcParams
+rcP = namespace[plt_name].rcParams
 try:
     locale = namespace["locale"].localeconv()
     decimal_sep = locale["decimal_point"]

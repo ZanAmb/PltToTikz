@@ -48,22 +48,38 @@ else:
             print("Error reading your file. Try again:")
 
 file.insert(0, "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n_axis_list=[]\n")
-i = 1
-plt_name = "plt"
-axis = {0: {"axis" : [plt_name], "fig": None}}
+i = 0
+plt_name = ""
+axis = {}
 a_num = 0
-while i < len(file):
+while not plt_name and i < len(file):
     if "import matplotlib.pyplot" in file[i]:
         q = file[i].split(" as ")
         plt_name = q[1].strip()
-    elif f"{plt_name}.subplots" in file[i]:
+        axis = {0: {"axis" : [plt_name], "fig": None}}
+    i += 1
+while i < len(file):
+    if f"{plt_name}.subplots" in file[i]:
         sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.+)\)\s*$", file[i]).groups())
         spaces = sbplt_data[0]
         loc_fig = sbplt_data[1]
         axis[a_num]["fig"] = loc_fig
         axs = sbplt_data[2].replace("(", "").replace(")", "").replace(" ", "").split(",")
         if len(sbplt_data) == 4:
-            axis[a_num]["geometry"] = str(sbplt_data[3])
+            tree = ast.parse(f"f({sbplt_data[3]})")
+            call=tree.body[0].value
+            args = [ast.unparse(arg) for arg in call.args]
+            kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+            controls = ""
+            for arg in args:
+                controls += f"str({arg}), "
+            for kwarg in kwargs:
+                spl = kwarg.split("=")
+                k, v = spl[0], "=".join(spl[1:])
+                controls += f"(\"{k}\", str({v})), "
+            controls = controls.removesuffix(", ")
+            i += 1
+            file.insert(i, spaces + f"_axis[\"default\"][\"geometry\"] = ({controls})\n")
         axis[a_num]["axis"] += axs
         for a in range(len(axs)):
             i += 1
@@ -147,7 +163,7 @@ exec(file, namespace)
 axs_list = namespace["_axis_list"]
 #with open("test_run.txt", "w") as f:
 #    f.write(str(axs_list))
-rcP = namespace[plt_name].rcParams
+#rcP = namespace[plt_name].rcParams
 try:
     locale = namespace["locale"].localeconv()
     decimal_sep = locale["decimal_point"]
@@ -164,19 +180,42 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     params = axs_list[plt_num]
     distr = {0: {"pos" : (0,0,1,1)}} # x,y,rel w,rel h
     shape = [1,1]
-    if "geometry" in plt.keys():
-        tree = ast.parse(f"a({plt["geometry"]})")
-        call=tree.body[0].value
-        args = [ast.unparse(arg) for arg in call.args]
-        kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+    if "geometry" in params["default"].keys():
+        geom = params["default"]["geometry"]
+        args = [geom[q] for q in range(len(geom)) if not isinstance(geom[q], tuple)]
+        kwargs = [geom[q] for q in range(len(geom)) if isinstance(geom[q], tuple)]
         for i in range(len(args)):
             shape[i] = args[i]
-        for kw in kwargs:
-            pass
         nx, ny = int(shape[1]), int(shape[0])
         for x in range(nx):
             for y in range(ny):
                 distr[y*nx+x+1] = {"pos": (x,y,1/nx,1/ny)}
+        for kw in kwargs:
+            k, arg = kw
+            if k.strip() == "width_ratios":
+                arg = arg.strip("[]()")
+                if "," in arg: arg=arg.split(",")
+                else: arg=arg.split(" ")
+                arg = [float(arg[q]) for q in range(len(arg))]
+                s = sum(arg)
+                for d in distr.keys():
+                    q = distr[d]["pos"]
+                    distr[d]["pos"] = (q[0], q[1], arg[q[0]] / s, q[3])
+            if k.strip() == "height_ratios":
+                arg = arg.strip("[]()")
+                if "," in arg: arg=arg.split(",")
+                else: arg=arg.split(" ")
+                arg = [float(arg[q]) for q in range(len(arg))]
+                s = sum(arg)
+                for d in distr.keys():
+                    q = distr[d]["pos"]
+                    distr[d]["pos"] = (q[0], q[1], q[2], arg[q[1]] / s)
+#            if "share" in k:
+#                if arg.strip() == "row": arg = 1
+#                elif arg.strip() == "col": arg = 2
+#                elif arg.strip() == "all" or arg.strip() == "True": arg = 0
+#                sh_ax = k.strip().removeprefix("share")
+#                distr[d][f"{sh_ax}mode"] = arg
     
     for ax_name in plt["axis"]:
         if ax_name == plt_name: ax_name = "default"
@@ -192,14 +231,15 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
 
         def find_def(k, vals):
             output = {}
-            if "lim" in k:
+            if "lim" in k or k in ["set_xlim", "set_ylim"]:
+                k = k.replace("set_", "")
                 if isinstance(vals[0], tuple):
                     for v in vals:
                         s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
                         output[k[0]+s]=v[1]
                 else:
                     sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
-                    output[sp], output[zg] = vals[0].strip("()").split(", ")
+                    output[sp], output[zg] = vals
             if "legend" == str(k).strip():
                 global legend
                 legend = True
@@ -286,12 +326,14 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                     lx = border
                                 elif "east" in posit:
                                     lx = 1 - border                    
-                            output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"}"                    
+                            output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"},"                
             return output
         
         gas = default_graph_arguments.copy()
+        for cmd in cmds:
+            gas.update(find_def(cmd, cmds[cmd]))
 
-        color_map = {'b':'blue', 'g':'green', 'r':'red', 'c':'cyan', 'm':'magenta', 'y':'yellow', 'k':'black', 'w':'white', "orange":"orange"}
+        color_map = {'b':'blue', 'g':'teal', 'r':'red', 'c':'cyan', 'm':'magenta', 'y':'yellow', 'k':'black', 'w':'white', "orange":"orange", "green": "green", "cyan":"cyan", "peru": "brown", "lime": "lime", "gray": "gray", "magenta": "magetna", "purple": "violet"}
         marker_map = {'o':'*', ".": "*", 's':'square*', '^':'triangle', 'v':'triangle*', 'd':'diamond', '+':'+', 'x':'x', '*':'star'}
         line_map = {"--": "dashed", ":": "dotted", "-.": "dashdot"}
         default_colors = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
@@ -453,9 +495,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     plots += f"\\label{{{label}}}"
                     distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
 
-        for cmd in cmds:
-            gas.update(find_def(cmd, cmds[cmd]))
-
         graph_arguments = ""
         for ga in gas:
             graph_arguments += f"\t{ga}={gas[ga]},\n"
@@ -497,18 +536,18 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             for l in distr[d]["labels"]:
                 lab, sec = l
                 if sec and distr[d]["legends"][0]:
-                    tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "}\n"
+                    tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "},\n"
             tikz_code += r"\end{axis}" + "\n"
             if dual:
                 tikz_code += r"\begin{axis}["+ "\n"
                 tikz_code += f"width={w}cm, height={h}cm,\n"
                 tikz_code += r"axis y line*=right, axis x line=none," + "\n"
-                tikz_code += r"at={(" + f"p{d}" +r".south west)}, anchor=south west, y label style={at={(1.15,0.5)}},"
+                tikz_code += r"at={(" + f"p{d}" +r".south west)}, anchor=south west, y label style={at={(1.1,0.5)}, rotate=180},"
                 tikz_code += distr[d]["secondary"][0] + "]\n"
                 for l in distr[d]["labels"]:
                     lab, sec = l
                     if not sec and distr[d]["legends"][1]:
-                        tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "}\n"
+                        tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "},\n"
                 tikz_code += distr[d]["secondary"][1] + "\n"
                 tikz_code += r"\end{axis}" + "\n"
     tikz_code += r"\end{tikzpicture}"

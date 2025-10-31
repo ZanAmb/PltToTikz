@@ -8,6 +8,9 @@ Sliko v svojo .tex datoteko dodate kot `\input{xxx.tikz}`, za delovanje sta potr
 
 Podprte nastavitve:
 - tip grafa: plot, scatter, stackplot, errorbar,
+- subplots (več grafov v eni sliki),
+- dvojne y-osi,
+- logaritemska skala osi,
 - decimalna vejica in pika (lahko tudi za tisočice; če je nastavljena v Matplotlibu prek locale),
 - meje osi (oboje, spodnja, zgornja),
 - oznake osi in pripadajoče črte,
@@ -27,7 +30,9 @@ Nekatere (še) nepodprte nastavitve:
 - barvne sheme,
 - ...
 
-Opažene napake in predloge lahko javite v GitHubov Issues tega projekta. Trenutna najnovejša verzija je v0.4.
+Pri dvojnih oseh je težko narediti enotno legendo v Pythonu, zato v primeru, da vsaj na eni od osi kličete `legend()`, LaTeX verzija grafa prikaže vse poimenovane grafe (vse s parametrom `label`).
+
+Opažene napake in predloge lahko javite v GitHubov Issues tega projekta. Trenutna najnovejša verzija je v0.5.
 
 Demonstarcijski primer (privzete barve, v0.3):
 
@@ -35,6 +40,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

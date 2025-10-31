@@ -33,9 +33,11 @@ Nekatere (še) nepodprte nastavitve:
 
 Opažene napake in predloge lahko javite v GitHubov Issues tega projekta. Trenutna najnovejša verzija je v0.5.
 
+Uvoziti `matplotlib.pyplot as xxx`, kjer je `xxx` lahko katerokoli za Python veljavno ime. Predpogoj za pretvorbo je, da Pythonov program steče do konca (morebitne `plt.show()` okna morate zapreti), šele nato se začne pretvroba.
+
 Podroben nabor podprtih ukazov:
 | Matplotlib Command | Opis, opombe |
-|--------------------|---------|
+|--------------------|---------------------------|
 | `plot(x, y, **kwargs)` | Standarden graf, možnosti navedene spodaj |
 | `scatter(x, y, **kwargs)` | Nepovezane točke |
 | `stackplot(x, y, **kwargs)` | Površine |
@@ -47,7 +49,7 @@ Podroben nabor podprtih ukazov:
 ---
 
 | Matplotlib Keyword | Opis, opombe |
-|--------------------|-----------------|
+|--------------------|---------------------------|
 | `label="..."`| Ime za legendo|
 | `color="..."`  | Z besedo, RGB, HEX, skrajšano |
 | `marker="..."` | Tip točk|
@@ -62,14 +64,14 @@ Podroben nabor podprtih ukazov:
 
 | Matplotlib Command  | Opis, opombe |
 |--------------------|---------------------------|
-| `plt.subplots(nrows, ncols, ...)` |  S tem sliko razbijemo na `fig` in več osi, ki naj bodo EKSPLICITNO izražene na levi strani enačaja (shranjevanje osi kot `Iterable` še ni podprto), razmerje širin višin še ni podprto |
+| `plt.subplots(nrows, ncols, ...)` |  S tem sliko razbijemo na `fig` in več osi, ki naj bodo EKSPLICITNO izražene na levi strani enačaja (shranjevanje osi kot `Iterable` še ni podprto), razmerje širin višin nastavimo s `width_ratios` oz. `height_ratios`. Možnosti deljenih osi še ni (če vsebina nima enakega razpona in morajo biti osi enake, je treba ročno nastaviti limite za vsako posebej. |
 | `ax.twinx()` | | Dobimo sekidnarno y-os |
 | `plt.show()` / `plt.savefig()` | Prikaz/shranjevanje slike avtomatično shrani tudi `.tikz` graf |
 
 ---
 
 | Matplotlib Command | Opis, opombe |
-|--------------------|--------|
+|--------------------|---------------------------|
 | `ax.set_xlabel(label)` | Oznaka osi x|
 | `ax.set_ylabel(label)` |  | Oznaka osi y |
 | `ax.set_title(label)` / `ax.set(title="...")`  | Naslov grafa |
@@ -85,7 +87,12 @@ Podroben nabor podprtih ukazov:
 | `ax.set_yticks([...])`, `ax.set_yticklabels([...])` |Točke na osi y in njihova imena |
 
 ---
-LEGENDA: Pri dvojnih oseh je težko narediti enotno legendo v Pythonu, zato v primeru, da vsaj na eni od osi kličete `legend()`, LaTeX verzija grafa prikaže vse poimenovane grafe (vse s parametrom `label`). Ročno koordiante nastavimo kot `loc=(x,y)`, kjer podamo relativne koordinate levega spodnjega kota na intervalu [0,1].
+LEGENDA: Pri dvojnih oseh je težko narediti enotno legendo v Pythonu, zato v primeru, da vsaj na eni od osi kličete `legend()`, LaTeX verzija grafa prikaže vse poimenovane grafe (vse s parametrom `label`). Pozor: grafi sekundarne osi lahko prečkajo legendo primarne. Ročno koordiante nastavimo kot `loc=(x,y)`, kjer podamo relativne koordinate levega spodnjega kota na intervalu [0,1].
+
+Demonstracijski primer (brez ročnih popravkov, v0.5, koda spodaj):
+<img width="775" height="750" alt="image" src="https://github.com/user-attachments/assets/bbe8e4ab-93c8-4398-afae-1d78fe9ca02b" />
+<img width="775" height="750" alt="image" src="https://github.com/user-attachments/assets/45783e92-6482-4e1d-9d83-ba926c8ab825" />
+
 
 
 Demonstarcijski primer (privzete barve, v0.3):
@@ -94,6 +101,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

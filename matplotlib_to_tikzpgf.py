@@ -77,7 +77,11 @@ while i < len(file):
                 else:
                     spaces = ""
                 i += 1
+                file.insert(i, "\n")
+                i += 1
                 file.insert(i, spaces + f"_axis_list.append(_axis.copy())\n")
+                i += 1
+                file.insert(i, spaces + "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n")
                 a_num += 1
                 axis[a_num] = {"axis" : [plt_name], "fig": None}
             elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar", "semilogx", "semilogy", "loglog"]):
@@ -137,12 +141,12 @@ default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
 dims = (13,10)
 file = "".join(file)
 namespace = {}
-with open("test_run.py", "w") as f:
-    f.write(str(file))
+#with open("test_run.py", "w") as f:
+#    f.write(str(file))
 exec(file, namespace)
 axs_list = namespace["_axis_list"]
-with open("test_run.txt", "w") as f:
-    f.write(str(axs_list))
+#with open("test_run.txt", "w") as f:
+#    f.write(str(axs_list))
 rcP = namespace[plt_name].rcParams
 try:
     locale = namespace["locale"].localeconv()

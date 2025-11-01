@@ -6,6 +6,7 @@ import os
 
 # ================ SETTINGS ================
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
+DIRECT_FIGSIZE = False      # use number of inch in matplotlib as number of cm in LaTeX
 
 
 count = 0
@@ -111,7 +112,7 @@ while i < len(file):
                 file.insert(i, spaces + "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n")
                 a_num += 1
                 axis[a_num] = {"axis" : [plt_name], "fig": None}
-            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar", "semilogx", "semilogy", "loglog", "stem"]):
+            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem"]):
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
                 args = [ast.unparse(arg) for arg in call.args]
@@ -191,6 +192,8 @@ legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower righ
 
 for plt_num in range(a_num):   # read and parse obtained commands into .tikz file(-s)
     plt = axis[plt_num]
+    if len(axs_list) <= plt_num:
+        continue
     params = axs_list[plt_num]
     distr = {0: {"pos" : (0,0,1,1)}} # x,y,rel w,rel h
     shape = [1,1]
@@ -313,10 +316,11 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                             if v[0].strip() == "figsize":
                                 dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
                                 w, h = float(dims.group(1)), float(dims.group(2))
-                                w -= 0.9
-                                h -= 1.1
-                                w *= 2
-                                h *= 2
+                                if not DIRECT_FIGSIZE:
+                                    w -= 0.9
+                                    h -= 1.1
+                                    w *= 2
+                                    h *= 2
                             dims = (w, h)
                         elif "legend" == str(k).strip():
                             if str(v[0]).strip() == "loc":
@@ -477,8 +481,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             style.append(f"color={col}")
             if ptype == "scatter":
                 style.append("only marks")
-            if ptype == "stackplot":
-                style.append(f"fill={col}")
             if ptype == "errorbar":
                 error_string = r"error bars/.cd," + "\n"
                 error_string += f"x dir=both, x fixed={xfe},\n" if xfe else "x dir=both, x explicit,\n"  

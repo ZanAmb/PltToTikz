@@ -6,6 +6,7 @@ import os
 
 # ================ SETTINGS ================
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
+OVERRIDE_1000_SEP = ""      # use x for auto
 DIRECT_FIGSIZE = False      # use number of inch in matplotlib as number of cm in LaTeX
 
 
@@ -179,15 +180,17 @@ axs_list = namespace["_axis_list"]
 #    f.write(str(axs_list))
 #rcP = namespace[plt_name].rcParams
 decimal_sep = OVERRIDE_DECIMAL_SEP
+th_sep = "" if OVERRIDE_1000_SEP == "x" else OVERRIDE_1000_SEP
 try:
     locale = namespace["locale"].localeconv()
     if not OVERRIDE_DECIMAL_SEP:
         decimal_sep = locale["decimal_point"]
-    th_sep = locale["thousands_sep"]
-    default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true,1000 sep={" + th_sep + r"},dec sep={" + decimal_sep + r"}]{\tick}}"
-except:
-    if OVERRIDE_DECIMAL_SEP:
-        default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true,dec sep={" + decimal_sep + r"}]{\tick}}"
+    if OVERRIDE_1000_SEP == "x":
+        th_sep = locale["thousands_sep"]
+    #default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true, 1000 sep={" + th_sep + r"},dec sep={" + decimal_sep + r"}]{\tick} $}"
+except: pass
+    #if OVERRIDE_DECIMAL_SEP:
+    #    default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true, dec sep={" + decimal_sep + r"}]{\tick}}"
 
 anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "south", "left": "west", "right": "east", "center": "center"}
 legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
@@ -291,7 +294,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     log_ax = str(k).strip().removeprefix("set_").removesuffix("scale")
                     if vals[0].strip() == "log":
                         base = 10
-                        if isinstance(vals[1], tuple) and vals[1][0].strip() == "base":
+                        if len(vals) > 1 and isinstance(vals[1], tuple) and vals[1][0].strip() == "base":
                             base = float(vals[1][1])
                         output[f"{log_ax}mode"] = "log"
                         if int(base) - base < 1e-5: base = int(base)
@@ -527,7 +530,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 plots += "\n"
             plots += "};\n"
 
-        graph_arguments = ""
+        graph_arguments = r"""/pgf/number format/.cd,""" + "\n"
+        if decimal_sep == ",":
+            graph_arguments += "use comma,\n"
+        graph_arguments += r"1000 sep={"+ th_sep + r"}," + "\n"
         for ga in gas:
             graph_arguments += f"\t{ga}={gas[ga]},\n"
         graph_arguments = graph_arguments.removesuffix(",\n")

@@ -100,7 +100,7 @@ while i < len(file):
                 file.insert(i, spaces + "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n")
                 a_num += 1
                 axis[a_num] = {"axis" : [plt_name], "fig": None}
-            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar", "semilogx", "semilogy", "loglog"]):
+            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "stackplot", "errorbar", "semilogx", "semilogy", "loglog", "stem"]):
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
                 args = [ast.unparse(arg) for arg in call.args]
@@ -239,7 +239,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         output[k[0]+s]=v[1]
                 else:
                     sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
-                    output[sp], output[zg] = vals
+                    if len(vals) == 2:
+                        output[sp], output[zg] = vals
+                    else:
+                        output[sp], output[zg] = vals[0].strip("()").split(", ")
             if "legend" == str(k).strip():
                 global legend
                 legend = True
@@ -470,6 +473,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 gas[f"log basis x"] = str(10)
                 gas[f"ymode"] = "log"
                 gas[f"log basis y"] = str(10)
+            if ptype == "stem":
+                style.append("ycomb")
             style = ",\n".join(style)
             x = ["x"] + list(p[0])
             y = ["y"] + list(p[1])

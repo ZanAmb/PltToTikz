@@ -57,7 +57,6 @@ i = 0
 plt_name = ""
 axis = {}
 a_num = 0
-export_names = []
 while not plt_name and i < len(file):
     if "import matplotlib.pyplot" in file[i]:
         q = file[i].split(" as ")
@@ -98,13 +97,16 @@ while i < len(file):
                     spaces = spaces[0]
                 else:
                     spaces = ""
+                fn = ""
                 if f"{pn}.savefig(" in file[i]:
                     fn = file[i].split(".savefig(")[1].split(",")[0].replace("\"", "").replace("\'", "").replace(")", "").strip()
-                    export_names.append(".".join(fn.split(".")[:-1]))
+                    fn = ".".join(fn.split(".")[:-1])
                 elif r"#name:" in file[i-1]:
-                    export_names.append(file[i-1].split(r"#name:")[1].strip())
-                else: export_names.append("")
-                i += 1
+                    fn = file[i-1].split(r"#name:")[1].strip()
+                nme = pn
+                if pn == plt_name: nme = "default"
+                file.insert(i-1, spaces + f"_axis[\"{nme}\"][\"names\"] = \"{fn}\"\n")
+                i += 2
                 file.insert(i, "\n")
                 i += 1
                 file.insert(i, spaces + f"_axis_list.append(_axis.copy())\n")
@@ -581,7 +583,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 tikz_code += distr[d]["secondary"][1] + "\n"
                 tikz_code += r"\end{axis}" + "\n"
     tikz_code += r"\end{tikzpicture}"
-    fn = export_names.pop(0)
+    fn = params["default"]["names"]
     if fn:
         fn = os.path.join(os.path.dirname(path), fn + ".tikz")
     else:

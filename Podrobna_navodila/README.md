@@ -24,9 +24,8 @@ Podprte nastavitve:
 - barva grafa,
 
 Nekatere (še) nepodprte nastavitve:
-- dvojne osi,
-- več grafov na eni sliki,
 - 3D grafi,
+- prikaz matrik, spektrogramov,
 - barvne sheme,
 - ...
 
@@ -37,7 +36,7 @@ Uvoziti `matplotlib.pyplot as xxx`, kjer je `xxx` lahko katerokoli za Python vel
 
 Podroben nabor podprtih ukazov:
 | Matplotlib Command | Opis, opombe |
-|--------------------|---------------------------|
+|:-------------------|:--------------------------|
 | `plot(x, y, **kwargs)` | Standarden graf, možnosti navedene spodaj |
 | `scatter(x, y, **kwargs)` | Nepovezane točke |
 | `stackplot(x, y, **kwargs)` | Površine |
@@ -49,7 +48,7 @@ Podroben nabor podprtih ukazov:
 ---
 
 | Matplotlib Keyword | Opis, opombe |
-|--------------------|---------------------------|
+|:-------------------|:--------------------------|
 | `label="..."`| Ime za legendo|
 | `color="..."`  | Z besedo, RGB, HEX, skrajšano |
 | `marker="..."` | Tip točk|
@@ -63,7 +62,7 @@ Podroben nabor podprtih ukazov:
 ---
 
 | Matplotlib Command  | Opis, opombe |
-|--------------------|---------------------------|
+|:-------------------|:--------------------------|
 | `plt.subplots(nrows, ncols, ...)` |  S tem sliko razbijemo na `fig` in več osi, ki naj bodo EKSPLICITNO izražene na levi strani enačaja (shranjevanje osi kot `Iterable` še ni podprto), razmerje širin višin nastavimo s `width_ratios` oz. `height_ratios`. Možnosti deljenih osi še ni (če vsebina nima enakega razpona in morajo biti osi enake, je treba ročno nastaviti limite za vsako posebej. |
 | `ax.twinx()` | | Dobimo sekidnarno y-os |
 | `plt.show()` / `plt.savefig()` | Prikaz/shranjevanje slike avtomatično shrani tudi `.tikz` graf |
@@ -71,7 +70,7 @@ Podroben nabor podprtih ukazov:
 ---
 
 | Matplotlib Command | Opis, opombe |
-|--------------------|---------------------------|
+|:-------------------|:--------------------------|
 | `ax.set_xlabel(label)` | Oznaka osi x|
 | `ax.set_ylabel(label)` |  | Oznaka osi y |
 | `ax.set_title(label)` / `ax.set(title="...")`  | Naslov grafa |
@@ -101,6 +100,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

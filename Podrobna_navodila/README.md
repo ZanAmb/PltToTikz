@@ -69,7 +69,7 @@ Podroben nabor podprtih ukazov:
 | `plt.show()` / `plt.savefig()` | Prikaz/shranjevanje slike avtomatično shrani tudi `.tikz` graf |
 
 ---
-
+Pri shranjevanju se ohrani ime, končnica pa se zamenja. V primeru uporabe `plt.show()` lahko ime izhodne `.tikz` datoteke nadzirate tako, da v vrstici, ki je neposredno nad ukazom, dodate `#name: xxx`. Če imena ne določite, se poimenuje kot ime programa z zaporedno številko grafa.   
 | Matplotlib Command | Opis, opombe |
 |:-------------------|:--------------------------|
 | `ax.set_xlabel(label)` | Oznaka osi x|
@@ -101,6 +101,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

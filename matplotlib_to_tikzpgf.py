@@ -52,6 +52,7 @@ i = 0
 plt_name = ""
 axis = {}
 a_num = 0
+export_names = []
 while not plt_name and i < len(file):
     if "import matplotlib.pyplot" in file[i]:
         q = file[i].split(" as ")
@@ -92,6 +93,12 @@ while i < len(file):
                     spaces = spaces[0]
                 else:
                     spaces = ""
+                if f"{pn}.savefig(" in file[i]:
+                    fn = file[i].split(".savefig(")[1].split(",")[0].replace("\"", "").replace("\'", "").replace(")", "").strip()
+                    export_names.append(".".join(fn.split(".")[:-1]))
+                elif r"#name:" in file[i-1]:
+                    export_names.append(file[i-1].split(r"#name:")[1].strip())
+                else: export_names.append("")
                 i += 1
                 file.insert(i, "\n")
                 i += 1
@@ -231,105 +238,108 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
 
         def find_def(k, vals):
             output = {}
-            if "lim" in k or k in ["set_xlim", "set_ylim"]:
-                k = k.replace("set_", "")
-                if isinstance(vals[0], tuple):
-                    for v in vals:
-                        s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
-                        output[k[0]+s]=v[1]
-                else:
-                    sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
-                    if len(vals) == 2:
-                        output[sp], output[zg] = vals
+            try:
+                if "lim" in k or k in ["set_xlim", "set_ylim"]:
+                    k = k.replace("set_", "")
+                    if isinstance(vals[0], tuple):
+                        for v in vals:
+                            s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
+                            output[k[0]+s]=v[1]
                     else:
-                        output[sp], output[zg] = vals[0].strip("()").split(", ")
-            if "legend" == str(k).strip():
-                global legend
-                legend = True
-                ind = 1 * (plt_no < 0)
-                distr[abs(plt_no)]["legends"][ind] = True
-            if str(k) in ["xticks", "yticks"]:
-                tck = str(k).removesuffix("s")
-                tns = ",".join([str(q).strip() for q in str(vals[0]).replace("[", r"{").replace("]", r"}").split(",")])
-                if len(tns) < 3:
-                    tns = r"\empty"
-                output[tck] = tns
-                if len(vals) == 2:
-                    tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
-                    output[tck + "labels"] = r"{" + tls + r"}"
-            elif k == "grid":
-                output[k] = "both"
-            elif str(k).strip() == "set_size_inches":
-                w, h = float(vals[0]), float(vals[1])
-                w -= 0.9
-                h -= 1.1
-                w *= 2
-                h *= 2
-                global dims
-                dims = (w, h)
-            elif str(k).strip() in ["set_xscale", "set_yscale"]:
-                log_ax = str(k).strip().removeprefix("set_").removesuffix("scale")
-                if vals[0].strip() == "log":
-                    base = 10
-                    if isinstance(vals[1], tuple) and vals[1][0].strip() == "base":
-                        base = float(vals[1][1])
-                    output[f"{log_ax}mode"] = "log"
-                    if int(base) - base < 1e-5: base = int(base)
-                    output[f"log basis {log_ax}"] = str(base)
-            else:
-                for v in vals:
-                    if "title" in k:
-                        if isinstance(v, tuple):
-                            if "loc" in v[0]:
-                                output["title style"] = r"{align=" + v[1] + r"}"
+                        sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
+                        if len(vals) == 2:
+                            output[sp], output[zg] = vals
                         else:
-                            output["title"] = r"{" + v + r"}"
-                    elif str(k).strip() == "set":
-                        if str(v[0]).strip() == "title":
-                            output["title"] = r"{" + v[1] + r"}"
-                    elif str(k).strip() in ["ylabel", "xlabel", "set_xlabel", "set_ylabel"]:
-                        k = str(k).strip().removeprefix("set_")
-                        if isinstance(v, tuple):
-                            if "loc" in v[0]:
-                                output[f"{k} style"] = r"{anchor=" + anchor_map[v[1]] + r"}"
-                        else:
-                            output[k] = r"{" + v + r"}"
-                    elif str(k).strip() == "figure":
-                        if v[0].strip() == "figsize":
-                            dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
-                            w, h = float(dims.group(1)), float(dims.group(2))
-                            w -= 0.9
-                            h -= 1.1
-                            w *= 2
-                            h *= 2
-                        dims = (w, h)
-                    elif "legend" == str(k).strip():
-                        if str(v[0]).strip() == "loc":
-                            if str(v[1]).strip == "best":
-                                continue
-                            if "(" in v[1]:
-                                tup = re.search(r"\(\s*([\d\.]+)\s*,\s*([\d\.]+)\s*\)", v[1]).groups()
-                                if len(tup) == 2:
-                                    lx, ly = tup[0], tup[1]
-                                posit = "south west"
+                            output[sp], output[zg] = vals[0].strip("()").split(", ")
+                if "legend" == str(k).strip():
+                    global legend
+                    legend = True
+                    ind = 1 * (plt_no < 0)
+                    distr[abs(plt_no)]["legends"][ind] = True
+                if str(k) in ["xticks", "yticks"]:
+                    tck = str(k).removesuffix("s")
+                    tns = ",".join([str(q).strip() for q in str(vals[0]).replace("[", r"{").replace("]", r"}").split(",")])
+                    if len(tns) < 3:
+                        tns = r"\empty"
+                    output[tck] = tns
+                    if len(vals) == 2:
+                        tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
+                        output[tck + "labels"] = r"{" + tls + r"}"
+                elif k == "grid":
+                    output[k] = "both"
+                elif str(k).strip() == "set_size_inches":
+                    w, h = float(vals[0]), float(vals[1])
+                    w -= 0.9
+                    h -= 1.1
+                    w *= 2
+                    h *= 2
+                    global dims
+                    dims = (w, h)
+                elif str(k).strip() in ["set_xscale", "set_yscale"]:
+                    log_ax = str(k).strip().removeprefix("set_").removesuffix("scale")
+                    if vals[0].strip() == "log":
+                        base = 10
+                        if isinstance(vals[1], tuple) and vals[1][0].strip() == "base":
+                            base = float(vals[1][1])
+                        output[f"{log_ax}mode"] = "log"
+                        if int(base) - base < 1e-5: base = int(base)
+                        output[f"log basis {log_ax}"] = str(base)
+                else:
+                    for v in vals:
+                        if "title" in k:
+                            if isinstance(v, tuple):
+                                if "loc" in v[0]:
+                                    output["title style"] = r"{align=" + v[1] + r"}"
                             else:
-                                if len(v[1]) < 3:
-                                    try:
-                                        v = (v[0],int(v[1]))
-                                    except: continue
-                                    v = (v[0], legend_pos_map[v[1]])
-                                posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
-                                border = 0.03
-                                lx, ly = 0.5, 0.5
-                                if "north" in posit:
-                                    ly = 1 - border
-                                elif "south" in posit:
-                                    ly = border
-                                if "west" in posit:
-                                    lx = border
-                                elif "east" in posit:
-                                    lx = 1 - border                    
-                            output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"},"                
+                                output["title"] = r"{" + v + r"}"
+                        elif str(k).strip() == "set":
+                            if str(v[0]).strip() == "title":
+                                output["title"] = r"{" + v[1] + r"}"
+                        elif str(k).strip() in ["ylabel", "xlabel", "set_xlabel", "set_ylabel"]:
+                            k = str(k).strip().removeprefix("set_")
+                            if isinstance(v, tuple):
+                                if "loc" in v[0]:
+                                    output[f"{k} style"] = r"{anchor=" + anchor_map[v[1]] + r"}"
+                            else:
+                                output[k] = r"{" + v + r"}"
+                        elif str(k).strip() == "figure":
+                            if v[0].strip() == "figsize":
+                                dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
+                                w, h = float(dims.group(1)), float(dims.group(2))
+                                w -= 0.9
+                                h -= 1.1
+                                w *= 2
+                                h *= 2
+                            dims = (w, h)
+                        elif "legend" == str(k).strip():
+                            if str(v[0]).strip() == "loc":
+                                if str(v[1]).strip == "best":
+                                    continue
+                                if "(" in v[1]:
+                                    tup = re.search(r"\(\s*([\d\.]+)\s*,\s*([\d\.]+)\s*\)", v[1]).groups()
+                                    if len(tup) == 2:
+                                        lx, ly = tup[0], tup[1]
+                                    posit = "south west"
+                                else:
+                                    if len(v[1]) < 3:
+                                        try:
+                                            v = (v[0],int(v[1]))
+                                        except: continue
+                                        v = (v[0], legend_pos_map[v[1]])
+                                    posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
+                                    border = 0.03
+                                    lx, ly = 0.5, 0.5
+                                    if "north" in posit:
+                                        ly = 1 - border
+                                    elif "south" in posit:
+                                        ly = border
+                                    if "west" in posit:
+                                        lx = border
+                                    elif "east" in posit:
+                                        lx = 1 - border                    
+                                output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"},"         
+            except Exception as e:   
+                print(f"Napaka pri ukazu  {k}:{v}:{e}")    
             return output
         
         gas = default_graph_arguments.copy()
@@ -365,86 +375,90 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             ad_col = {}
             xfe, yfe = 0, 0
             for arg in p[2:]:
-                if isinstance(arg, tuple):
-                    k, v = str(arg[0]).strip(), arg[1]
-                    if "label" in k:
-                        label = v
-                    elif "alpha" in k:
-                        style.append(f"opacity={v}")
-                    elif "marker" == k:
-                        marker = next((marker_map[m] for m in arg if m in marker_map), "*")
-                        if "." in str(arg) and mark_size == -1:
-                            mark_size = 1 
-                        mark = marker
-                    elif "linewidth" in k:
-                        style.append(f"line width={v}pt")
-                    elif "linestyle" in k:
-                        if v == "":
-                            style.append("only marks")
-                        elif v in line_map.keys():
-                            style.append(line_map[v])
-                        elif v in line_map.values():
-                            style.append(v)
-                    elif "markersize" in k:
-                        mark_size = f"{v/2:.f}"
-                    elif "color" in k:
-                        if v in color_map.keys():
-                            col = color_map[v]
-                        elif v in color_map.values():
-                            col = v
-                        elif str(v).strip()[0] == "#":
-                            try:
-                                col = hex_to_pgf(v)
-                            except:
-                                print("Bad color:", v)
-                        else:
-                            c = list(str(v).strip("( )").split(", "))
-                            while len(c) < 3:
-                                c.append(c[0])
-                            col = r"{rgb:" + f"red,{float(c[0])*255:.2f};green,{float(c[1])*255:.2f};blue,{float(c[2])*255:.2f}" + r"}"
-                    elif "err" in k:
-                        ax = k[0]
-                        try:
-                            if ax == "x":
-                                xfe = float(v)
-                            elif ax == "y":
-                                yfe = float(v)
-                        except:
-                            subs = v.strip("[]").split("], [")
-                            if len(subs) == 1:
-                                descriptor = f"{ax} error"
-                                if "," in subs[0]:
-                                    ad_col[descriptor] = subs[0].split(",")
-                                else:
-                                    ad_col[descriptor] = subs[0].split()
+                try:
+                    if isinstance(arg, tuple):
+                        k, v = str(arg[0]).strip(), arg[1]
+                        if "label" in k:
+                            label = v
+                        elif "alpha" in k:
+                            style.append(f"opacity={v}")
+                        elif "marker" == k:
+                            marker = next((marker_map[m] for m in arg if m in marker_map), "*")
+                            if "." in str(arg) and mark_size == -1:
+                                mark_size = 1 
+                            mark = marker
+                        elif "linewidth" in k:
+                            style.append(f"line width={v}pt")
+                        elif "linestyle" in k:
+                            if v == "":
+                                style.append("only marks")
+                            elif v in line_map.keys():
+                                style.append(line_map[v])
+                            elif v in line_map.values():
+                                style.append(v)
+                        elif "markersize" in k:
+                            mark_size = f"{v/2:.f}"
+                        elif "color" in k:
+                            if v in color_map.keys():
+                                col = color_map[v]
+                            elif v in color_map.values():
+                                col = v
+                            elif str(v).strip()[0] == "#":
+                                try:
+                                    col = hex_to_pgf(v)
+                                except:
+                                    print("Bad color:", v)
                             else:
-                                descriptor = f"{ax} error minus"
-                                if "," in subs[0]:
-                                    ad_col[descriptor] = subs[0].split(",")
+                                c = list(str(v).strip("( )").split(", "))
+                                while len(c) < 3:
+                                    c.append(c[0])
+                                col = r"{rgb:" + f"red,{float(c[0])*255:.2f};green,{float(c[1])*255:.2f};blue,{float(c[2])*255:.2f}" + r"}"
+                        elif "err" in k:
+                            ax = k[0]
+                            try:
+                                if ax == "x":
+                                    xfe = float(v)
+                                elif ax == "y":
+                                    yfe = float(v)
+                            except:
+                                subs = v.strip("[]").split("], [")
+                                if len(subs) == 1:
+                                    descriptor = f"{ax} error"
+                                    if "," in subs[0]:
+                                        ad_col[descriptor] = subs[0].split(",")
+                                    else:
+                                        ad_col[descriptor] = subs[0].split()
                                 else:
-                                    ad_col[descriptor] = subs[0].split()
-                                descriptor = f"{ax} error plus"
-                                if "," in subs[1]:
-                                    ad_col[descriptor] = subs[1].split(",")
-                                else:
-                                    ad_col[descriptor] = subs[1].split()
+                                    descriptor = f"{ax} error minus"
+                                    if "," in subs[0]:
+                                        ad_col[descriptor] = subs[0].split(",")
+                                    else:
+                                        ad_col[descriptor] = subs[0].split()
+                                    descriptor = f"{ax} error plus"
+                                    if "," in subs[1]:
+                                        ad_col[descriptor] = subs[1].split(",")
+                                    else:
+                                        ad_col[descriptor] = subs[1].split()
 
-                else:
-                    if arg in color_map.values():
-                        color = arg
-                        marker = False
                     else:
-                        color = next((color_map[c] for c in arg if c in color_map), None)
-                        marker = next((marker_map[m] for m in arg if m in marker_map), None)
-                    if "." in str(arg) and mark_size == -1:
-                        mark_size = 1 
-                    line = next((line_map[m] for m in line_map if m in arg), None)
-                    if color:
-                        col = color
-                    if marker:
-                        mark = marker
-                    if line:
-                        style.append(f"{line}")
+                        if arg in color_map.values():
+                            color = arg
+                            marker = False
+                        else:
+                            color = next((color_map[c] for c in arg if c in color_map), None)
+                            marker = next((marker_map[m] for m in arg if m in marker_map), None)
+                        if "." in str(marker) and mark_size == -1:
+                            mark_size = 1 
+                        line = next((line_map[m] for m in line_map if m in arg), None)
+                        if color:
+                            col = color
+                        if marker:
+                            mark = marker
+                        if line:
+                            style.append(f"{line}")
+                except Exception as e:
+                    print(f"Napaka pri ukazu  {ptype}:{arg}:{e}")
+
             if mark:
                 style.append(f"mark={mark}")
                 if mark_size == -1:
@@ -556,5 +570,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 tikz_code += distr[d]["secondary"][1] + "\n"
                 tikz_code += r"\end{axis}" + "\n"
     tikz_code += r"\end{tikzpicture}"
-    with open(path.replace(".py", f"{plt_num}.tikz"), "w") as f:
+    fn = export_names.pop(0)
+    if fn:
+        fn = os.path.join(os.path.dirname(path), fn + ".tikz")
+    else:
+        fn = path.replace(".py", f"{plt_num}.tikz")
+    with open(fn, "w") as f:
         f.write(tikz_code)

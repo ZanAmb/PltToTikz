@@ -4,6 +4,10 @@ import re
 import ast      # pip install astor
 import os
 
+# ================ SETTINGS ================
+OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
+
+
 count = 0
 def export_graph(final, _graph_arguments, _plots):
     global count
@@ -171,13 +175,16 @@ axs_list = namespace["_axis_list"]
 #with open("test_run.txt", "w") as f:
 #    f.write(str(axs_list))
 #rcP = namespace[plt_name].rcParams
+decimal_sep = OVERRIDE_DECIMAL_SEP
 try:
     locale = namespace["locale"].localeconv()
-    decimal_sep = locale["decimal_point"]
+    if not OVERRIDE_DECIMAL_SEP:
+        decimal_sep = locale["decimal_point"]
     th_sep = locale["thousands_sep"]
-
     default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true,1000 sep={" + th_sep + r"},dec sep={" + decimal_sep + r"}]{\tick}}"
-except: None
+except:
+    if OVERRIDE_DECIMAL_SEP:
+        default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true,dec sep={" + decimal_sep + r"}]{\tick}}"
 
 anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "south", "left": "west", "right": "east", "center": "center"}
 legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
@@ -489,6 +496,14 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 gas[f"log basis y"] = str(10)
             if ptype == "stem":
                 style.append("ycomb")
+            if len(label) > 0:
+                if legend:
+                    plots += f"\\addlegendentry{{{label}}}"
+                else:
+                    plots += f"\\label{{{label}}}"
+                    distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
+            else:
+                style.append("forget plot")
             style = ",\n".join(style)
             x = ["x"] + list(p[0])
             y = ["y"] + list(p[1])
@@ -507,12 +522,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         plots += "\t"
                 plots += "\n"
             plots += "};\n"
-            if len(label) > 0:
-                if legend:
-                    plots += f"\\addlegendentry{{{label}}}"
-                else:
-                    plots += f"\\label{{{label}}}"
-                    distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
 
         graph_arguments = ""
         for ga in gas:

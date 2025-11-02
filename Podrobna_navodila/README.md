@@ -50,7 +50,7 @@ Podroben nabor podprtih ukazov:
 | `hlines(y, xmin, xmax, **kwargs)` | Vodoravne črte|
 
 ---
-*Skupna legenda dvojnih osi za to ni podprta, rišite na tisti osi, na kateri nato kličete `legend()`.
+*Skupna legenda dvojnih osi za to ni podprta, rišite na tisti osi, na kateri nato kličete `legend()`. Relativne skale se slabo računajo za majhne vrednosti (če je skala pri vrednostih $10^{-5}$ ali manjše).
 
 | Matplotlib Keyword | Opis, opombe |
 |:-------------------|:--------------------------|
@@ -105,6 +105,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

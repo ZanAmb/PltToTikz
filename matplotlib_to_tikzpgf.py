@@ -1,4 +1,4 @@
-# v0.5 development
+# v0.6 development
 
 import re
 import ast      # pip install astor
@@ -9,33 +9,12 @@ OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
 OVERRIDE_1000_SEP = ""      # use x for auto
 DIRECT_FIGSIZE = False      # use number of inch in matplotlib as number of cm in LaTeX
 
+FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
 
-count = 0
-def export_graph(final, _graph_arguments, _plots):
-    global count
-    global dci
-    dci = []
-    tikz_code = r"""\begin{tikzpicture}
-    \begin{axis}["""+ "\n" + \
-    _graph_arguments + "\n" + \
-    """]\n""" + \
-    _plots + "\n" + \
-    r"""
-    \end{axis}
-    \end{tikzpicture}
-    """
-    name = ""
-    if not (final and count == 0):
-        name = count
-        count += 1
-    with open(path.replace(".py", f"{name}.tikz"), "w") as f:
-        f.write(tikz_code)
-
-dev_mode = False
 
 file = []
-if dev_mode:
-    path = "./test_plot.py"
+path = FILE_PATH
+if path:
     with open(path, "r") as f:
         file = f.readlines()
 else:
@@ -65,6 +44,10 @@ while not plt_name and i < len(file):
         axis = {0: {"axis" : [plt_name], "fig": None}}
     i += 1
 while i < len(file):
+    strpd = file[i].strip()
+    if len(strpd) == 0 or strpd[0] == "#":
+        i += 1
+        continue
     if f"{plt_name}.subplots" in file[i]:
         sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.+)\)\s*$", file[i]).groups())
         spaces = sbplt_data[0]
@@ -139,6 +122,29 @@ while i < len(file):
                 if pn == plt_name: nme = "default"
                 i += 1
                 file.insert(i, spaces + f"_axis[\"{nme}\"][\"datas\"].append([\"{ptype}\", {x}, {y}, {controls}])\n")
+            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["vlines", "hlines", "axvline", "axhline"]):
+                tree = ast.parse(file[i].strip())
+                call = tree.body[0].value
+                args = [ast.unparse(arg) for arg in call.args]
+                kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+                spaces = list(re.search(r"^([\s\#]*)" + pn + r"\.([\w]+)\(", file[i]).groups())
+                ptype = spaces[-1]
+                if len(spaces) == 2:
+                    spaces = spaces[0]
+                else:
+                    spaces = ""
+                controls = ""
+                for arg in args:
+                    controls += f"str({arg}), "
+                for kwarg in kwargs:
+                    spl = kwarg.split("=")
+                    k, v = spl[0], "=".join(spl[1:])
+                    controls += f"(\"{k}\", str({v})), "
+                controls = controls.removesuffix(", ")
+                nme = pn
+                if pn == plt_name: nme = "default"
+                i += 1
+                file.insert(i, spaces + f"_axis[\"{nme}\"][\"datas\"].append([\"{ptype}\", {controls}])\n")
             elif f"{pn}.twinx()" in file[i]:
                 groups = re.search(r"^([\s\#]*)([a-zA-Z0-9_]+)\s*=\s*" + pn + r"\.twinx\(\s*\)\s*$", file[i])
                 if groups:
@@ -245,6 +251,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         cmds = data["cmds"]
         datas = data["datas"]
         plt_no = data["plt_no"]
+        xmin = ymin = float("inf")
+        xmax = ymax = float("-inf")
+        vlines = []
+        hlines = []
         legend = False        
         if plt_no < 0:
             distr[abs(plt_no)]["secondary"] = []
@@ -374,15 +384,11 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 c.append(int(hex[i:i+2], 16) / 255)
             return r"{rgb:" + f"red,{c[0]:.2f};green,{c[1]:.2f};blue,{c[2]:.2f}" + r"}"
 
-        plots = ""
+        plots = []
+        plot = ""
         while datas:
             col = None
             p = datas.pop(0)
-            """if len(p) == 1:
-                #export_graph(False, gas_list[count], plots)
-                print(gas_list[count], plots)
-                plots = ""
-                continue"""
             label = ""
             ptype = p.pop(0)
             style = []
@@ -390,6 +396,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             mark = ""
             ad_col = {}
             xfe, yfe = 0, 0
+            cline = ptype in ["vlines", "hlines", "axvline", "axhline"]
             for arg in p[2:]:
                 try:
                     if isinstance(arg, tuple):
@@ -491,44 +498,109 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 error_string += f"x dir=both, x fixed={xfe},\n" if xfe else "x dir=both, x explicit,\n"  
                 error_string += f"x dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"  
                 style.append(error_string)
-            if "semilog" in ptype:
+            elif "semilog" in ptype:
                 log_ax = ptype.strip().replace("semilog", "")
                 gas[f"{log_ax}mode"] = "log"
                 gas[f"log basis {log_ax}"] = str(10)
                 #graph_arguments += f"{log_ax}mode=log, log basis {log_ax} = 10,\n"
-            if ptype == "loglog":                
+            elif ptype == "loglog":                
                 gas[f"xmode"] = "log"
                 gas[f"log basis x"] = str(10)
                 gas[f"ymode"] = "log"
                 gas[f"log basis y"] = str(10)
-            if ptype == "stem":
+            elif ptype == "stem":
                 style.append("ycomb")
-            if len(label) > 0:
-                if legend:
-                    plots += f"\\addlegendentry{{{label}}}"
+            elif ptype in ["vlines", "hlines"]:
+                s = 0
+                while s < len(style):
+                    if "mark" in style[s]: style.pop(s)
+                    else: s+= 1
+                lines = []
+                vert = "v" in ptype
+                for q in range(3):
+                    linep = p[q]
+                    linep = linep.strip("[]")
+                    if "," in linep: linep = linep.split(", ")
+                    else: linep = linep.split(" ")
+                    lines.append(linep)
+                while len(lines[1]) < len(lines[0]):
+                    lines[1].append(lines[1][-1])
+                while len(lines[2]) < len(lines[0]):
+                    lines[2].append(lines[2][-1])
+                for q in range(len(lines[0])):
+                    points = ""
+                    if v:
+                        points = f"{float(lines[0][q]), float(lines[1][q])}\n{float(lines[0][q]), float(lines[2][q])}"
+                    else:
+                        points = f"{float(lines[1][q]), float(lines[0][q])}\n{float(lines[2][q]), float(lines[0][q])}"
+                    if q > 0: plots.append(f"\n\\addplot[{",".join(style)}, forget plot] coordinates {{{points}}};")
+                    else: plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
+                if len(label) > 0:
+                    if legend:
+                        plots[-1] += f"\\addlegendentry{{{label}}}"
+                    else:
+                        plots[-1] += f"\\label{{{label}}}"
+                        distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
+                
+            elif ptype in ["axvline", "axhline"]:
+                arbit = [0,0,1]
+                #style.append("forget plot")
+                for q in range(len(p)):
+                    if isinstance(p[q], tuple):
+                        if p[q][0] in ["x", "y"]:
+                            arbit[0] = p[q][1]
+                        elif p[q][0] in ["xmin", "ymin"]:
+                            arbit[1] = p[q][1]
+                        elif p[q][0] in ["xmax", "ymax"]:
+                            arbit[2] = p[q][1]
+                    else:
+                        arbit[q] = p[q]
+                if "v" in ptype:
+                    plots.append(f"\n\\DrawVline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
                 else:
-                    plots += f"\\label{{{label}}}"
+                    plots.append(f"\n\\DrawHline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
+                if len(label) > 0:
+                    if legend:
+                        plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
+                
+            if len(label) > 0 and not cline:
+                if legend:
+                    plot += f"\\addlegendentry{{{label}}}"
+                else:
+                    plot += f"\\label{{{label}}}"
                     distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
-            else:
+            elif not cline:
                 style.append("forget plot")
             style = ",\n".join(style)
-            x = ["x"] + list(p[0])
-            y = ["y"] + list(p[1])
-            plot_points = [x,y]
-            ad_spec = ""
-            for ac in ad_col.keys():
-                ad_spec += f", {ac}={ac.replace(" ", "")}"
-                pts = [ac.replace(" ", "")] + list(ad_col[ac])
-                plot_points.append(pts)
-            plots += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{\n"
-            for i in range(len(x)):
-                for j in range(len(plot_points)):
-                    try:
-                        plots += "\t" + str(plot_points[j][i])
-                    except:
-                        plots += "\t"
-                plots += "\n"
-            plots += "};\n"
+            if not cline:
+                x = ["x"] + list(p[0])
+                y = ["y"] + list(p[1])
+                plot_points = [x,y]
+                ad_spec = ""
+                for ac in ad_col.keys():
+                    ad_spec += f", {ac}={ac.replace(" ", "")}"
+                    pts = [ac.replace(" ", "")] + list(ad_col[ac])
+                    plot_points.append(pts)
+                plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{\n"
+                for i in range(len(x)):
+                    for j in range(len(plot_points)):
+                        try:
+                            pp = plot_points[j][i]
+                            plot += "\t" + str(pp)
+                            if i > 0:
+                                if j == 0:
+                                    xmin = min(xmin, pp)
+                                    xmax = max(xmax, pp)
+                                elif j == 1:
+                                    ymin = min(ymin, pp)
+                                    ymax = max(ymax, pp)
+                        except Exception as e:
+                            print(e)
+                            plot += "\t"
+                    plot += "\n"
+                plot += "};\n"
+                plots.append(plot)
+                plot = ""
 
         graph_arguments = r"""/pgf/number format/.cd,""" + "\n"
         if decimal_sep == ",":
@@ -537,14 +609,32 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         for ga in gas:
             graph_arguments += f"\t{ga}={gas[ga]},\n"
         graph_arguments = graph_arguments.removesuffix(",\n")
-
+        plots = "".join(plots)
         if plt_no < 0:
             distr[abs(plt_no)]["secondary"] = [graph_arguments,plots]
         else:
             distr[abs(plt_no)]["primary"] = [graph_arguments, plots]
 
     # put it together
-    tikz_code = r"\begin{tikzpicture}" + "\n"
+    tikz_code = r"""\begin{tikzpicture}
+    \newcommand{\DrawHline}[4]{
+    \pgfplotsextra{
+    \pgfkeysgetvalue{/pgfplots/xmin}\xmin
+    \pgfkeysgetvalue{/pgfplots/xmax}\xmax
+    \pgfmathsetmacro{\xstartval}{\xmin + (#2)*( \xmax - \xmin )}
+    \pgfmathsetmacro{\xendval}{\xmin + (#3)*( \xmax - \xmin )}
+    }
+    \draw[#4] (axis cs:\xstartval,#1) -- (axis cs:\xendval,#1);
+    }
+    \newcommand{\DrawVline}[4]{
+    \pgfplotsextra{
+    \pgfkeysgetvalue{/pgfplots/ymin}\ymin
+    \pgfkeysgetvalue{/pgfplots/ymax}\ymax
+    \pgfmathsetmacro{\ystartval}{\ymin + (#2)*( \ymax - \ymin )}
+    \pgfmathsetmacro{\yendval}{\ymin + (#3)*( \ymax - \ymin )}
+    }
+    \draw[#4] (axis cs:#1,\ystartval) -- (axis cs:#1,\yendval);
+    }""" + "\n"
     if len(distr.keys()) > 1:
         del(distr[0])
     for d in list(sorted(distr.keys())):

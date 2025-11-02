@@ -203,6 +203,9 @@ legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower righ
 
 for plt_num in range(a_num):   # read and parse obtained commands into .tikz file(-s)
     plt = axis[plt_num]
+    limit_names = ["xmin", "xmax", "ymin", "ymax"]
+    limits = { axnm: [None,None,None,None] for axnm in plt["axis"]}
+    xshare, yshare = -1, -1
     if len(axs_list) <= plt_num:
         continue
     params = axs_list[plt_num]
@@ -238,12 +241,13 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 for d in distr.keys():
                     q = distr[d]["pos"]
                     distr[d]["pos"] = (q[0], q[1], q[2], arg[q[1]] / s)
-#            if "share" in k:
-#                if arg.strip() == "row": arg = 1
-#                elif arg.strip() == "col": arg = 2
-#                elif arg.strip() == "all" or arg.strip() == "True": arg = 0
-#                sh_ax = k.strip().removeprefix("share")
-#                distr[d][f"{sh_ax}mode"] = arg
+            if "share" in k:
+                if arg.strip() == "row": arg = 1
+                elif arg.strip() == "col": arg = 2
+                elif arg.strip() == "all" or arg.strip() == "True": arg = 0
+                else: arg = -1
+                if k.strip().removeprefix("share") == "x": xshare = arg
+                else: yshare = arg
     
     for ax_name in plt["axis"]:
         if ax_name == plt_name: ax_name = "default"
@@ -270,12 +274,15 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         for v in vals:
                             s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
                             output[k[0]+s]=v[1]
+                            limits[ax_name][limit_names.index(k[0]+s)] = v[1]
                     else:
                         sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
                         if len(vals) == 2:
                             output[sp], output[zg] = vals
                         else:
                             output[sp], output[zg] = vals[0].strip("()").split(", ")
+                        limits[ax_name][limit_names.index(sp)] = output[sp]
+                        limits[ax_name][limit_names.index(zg)] = output[zg]
                 if "legend" == str(k).strip():
                     global legend
                     legend = True
@@ -601,7 +608,37 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 plot += "};\n"
                 plots.append(plot)
                 plot = ""
-
+        if ax_name != "default":
+            if xshare >= 0:
+                if "xmin" not in gas:
+                    limits[ax_name][0] = f"d{xmin}"
+                if "xmax" not in gas:
+                    limits[ax_name][1] = f"d{xmax}"
+                s_num = ""
+                if xshare == 1:
+                    s_num = distr[abs(plt_no)]["pos"][1]
+                elif xshare == 2:
+                    s_num = distr[abs(plt_no)]["pos"][0]
+                gas["xmin"] = r"\xmin"
+                gas["xmax"] = r"\xmax"
+                if xshare > 0:
+                    gas["xmin"] = r"\xmin" + chr(97+s_num)
+                    gas["xmax"] = r"\xmax" + chr(97+s_num)
+            if yshare >= 0:
+                if "ymin" not in gas:
+                    limits[ax_name][2] = f"d{ymin}"
+                if "ymax" not in gas:
+                    limits[ax_name][3] = f"d{ymax}"
+                s_num = ""
+                if yshare == 1:
+                    s_num = distr[abs(plt_no)]["pos"][1]
+                elif yshare == 2:
+                    s_num = distr[abs(plt_no)]["pos"][0]
+                gas["ymin"] = r"\ymin"
+                gas["ymax"] = r"\ymax"
+                if yshare > 0:
+                    gas["ymin"] = r"\ymin" + chr(97+s_num)
+                    gas["ymax"] = r"\ymax" + chr(97+s_num)
         graph_arguments = r"""/pgf/number format/.cd,""" + "\n"
         if decimal_sep == ",":
             graph_arguments += "use comma,\n"
@@ -614,10 +651,143 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             distr[abs(plt_no)]["secondary"] = [graph_arguments,plots]
         else:
             distr[abs(plt_no)]["primary"] = [graph_arguments, plots]
+    
+    limit_grid = {}
+    for pk in params.keys():
+        if pk == "default": continue
+        plt_no = params[pk]["plt_no"]
+        if plt_no < 0: continue
+        x,y,_,_ = distr[plt_no]["pos"]
+        if y not in limit_grid:
+            limit_grid[y] = {}
+        limit_grid[y][x] = limits[pk].copy()
+    macros = []
+    if xshare == 0:
+        x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+        for y in limit_grid.values():
+            for x in y.values():
+                p1,p2,_,_=x
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    x1 = min(x1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    x2 = max(x2, float(p2))
+        if x1 == float("inf"):
+            x1 = d1 - (d2-d1) * 0.03
+        if x2 == float("-inf"):
+            x2 = d2 + (d2-d1) * 0.03
+        macros.append(r"\pgfmathsetmacro{\xmin}{" + str(x1) + r"}")
+        macros.append(r"\pgfmathsetmacro{\xmax}{" + str(x2) + r"}")
+    if xshare == 1:
+        for y in limit_grid.keys():
+            x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+            for x in limit_grid[y].values():
+                p1,p2,_,_=x
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    x1 = min(x1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    x2 = max(x2, float(p2))
+            if x1 == float("inf"):
+                x1 = d1 - (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\xmin" + chr(97+y) + r"}{" + str(x1) + r"}")
+            if x2 == float("-inf"):
+                x2 = d2 + (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\xmax" + chr(97+y) + r"}{" + str(x2) + r"}")
+    if xshare == 2:
+        limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
+        for x in limit_grid.keys():
+            x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+            for y in limit_grid[x].values():
+                p1,p2,_,_=y
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    x1 = min(x1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    x2 = max(x2, float(p2))
+            if x1 == float("inf"):
+                x1 = d1 - (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\xmin" + chr(97+x) + r"}{" + str(x1) + r"}")
+            if x2 == float("-inf"):
+                x2 = d2 + (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\xmax" + chr(97+x) + r"}{" + str(x2) + r"}")
+    if yshare == 0:
+        y1, y2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+        for y in limit_grid.values():
+            for x in y.values():
+                _,_, p1, p2=x
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    y1 = min(y1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    y2 = max(y2, float(p2))
+        if y1 == float("inf"):
+            y1 = d1 - (d2-d1) * 0.03
+        if y2 == float("-inf"):
+            y2 = d2 + (d2-d1) * 0.03
+        macros.append(r"\pgfmathsetmacro{\ymin}{" + str(y1) + r"}")
+        macros.append(r"\pgfmathsetmacro{\ymax}{" + str(y2) + r"}")
+    if yshare == 1:
+        for y in limit_grid.keys():
+            y1, y2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+            for x in limit_grid[y].values():
+                _,_, p1, p2=x
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    y1 = min(y1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    y2 = max(y2, float(p2))
+            if y1 == float("inf"):
+                y1 = d1 - (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+y) + r"}{" + str(y1) + r"}")
+            if y2 == float("-inf"):
+                y2 = d2 + (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+y) + r"}{" + str(y2) + r"}")
+    if yshare == 2:
+        limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
+        for x in limit_grid.keys():
+            y1, y2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
+            for y in limit_grid[x].values():
+                _,_, p1, p2=y
+                if "d" in p1:
+                    d1 = min(d1, float(p1[1:]))
+                else:
+                    y1 = min(y1, float(p1))
+                if "d" in p2:
+                    d2 = max(d2, float(p2[1:]))
+                else:
+                    y2 = max(y2, float(p2))
+            if y1 == float("inf"):
+                y1 = d1 - (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+x) + r"}{" + str(y1) + r"}")
+            if y2 == float("-inf"):
+                y2 = d2 + (d2-d1) * 0.03
+            macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+x) + r"}{" + str(y2) + r"}")
+
+            
+
+
+        
+    
 
     # put it together
-    tikz_code = r"""\begin{tikzpicture}
-    \newcommand{\DrawHline}[4]{
+    tikz_code = r"""\begin{tikzpicture}""" + "\n" + "\n".join(macros)
+    tikz_code += r"""\newcommand{\DrawHline}[4]{
     \pgfplotsextra{
     \pgfkeysgetvalue{/pgfplots/xmin}\xmin
     \pgfkeysgetvalue{/pgfplots/xmax}\xmax

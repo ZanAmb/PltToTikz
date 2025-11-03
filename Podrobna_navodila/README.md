@@ -68,7 +68,7 @@ Podroben nabor podprtih ukazov:
 
 | Matplotlib Command  | Opis, opombe |
 |:-------------------|:--------------------------|
-| `plt.subplots(nrows, ncols, ...)` |  S tem sliko razbijemo na `fig` in več osi, ki naj bodo EKSPLICITNO izražene na levi strani enačaja (shranjevanje osi kot `Iterable` še ni podprto), razmerje širin višin nastavimo s `width_ratios` oz. `height_ratios`. Možnosti deljenih osi (`sharex`, `sharey`) omogoča izenačenje osi. Priporočeno je podati vsaj 1 limito za vsako skupino, v primeru večih se upošteva absolutno večje (Python upošteva zadnje). Če limite niso ročno podane, vzame največji razpon podanih narisanih točk (brez napak) in mu na vsaki strani doda 3% širine (upošteva tudi točke, ki zaradi limite na drugi osi morda niso vidne). Ignorira sekundarno y-os|
+| `plt.subplots(nrows, ncols, ...)` |  S tem sliko razbijemo na `fig` in več osi, ki so izražene na levi strani enačaja. POZOR: parametri te funkcije morajo biti EKSPLICITNO zapisani (ne s spremenlivkami). Razmerje širin višin nastavimo s `width_ratios` oz. `height_ratios`. Če več osi zapišete v eno spremenljivko, morajo biti klici obvezno opravljeni z indeksom (`for ax in axs` ne bo deloval). Možnosti deljenih osi (`sharex`, `sharey`) omogočajo izenačenje osi (vse, stolpci, vrstice). Priporočeno je podati vsaj 1 limito za vsako skupino, v primeru večih se upošteva absolutno večje (Python upošteva zadnje). Če limite niso ročno podane, vzame največji razpon podanih narisanih točk (brez napak) in mu na vsaki strani doda 3% širine (upošteva tudi točke, ki zaradi limite na drugi osi morda niso vidne). Ignorira sekundarno y-os|
 | `ax.twinx()` | | Dobimo sekidnarno y-os |
 | `plt.show()` / `plt.savefig()` | Prikaz/shranjevanje slike avtomatično shrani tudi `.tikz` graf |
 
@@ -105,6 +105,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

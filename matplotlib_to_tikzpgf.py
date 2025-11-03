@@ -3,14 +3,27 @@
 import re
 import ast      # pip install astor
 import os
+import math
 
 # ================ SETTINGS ================
+FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
+
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
 OVERRIDE_1000_SEP = ""      # use x for auto
 DIRECT_FIGSIZE = False      # use number of inch in matplotlib as number of cm in LaTeX
+DEFUALT_FIGSIZE = (13,10)   # default size setting in cm
+LEGEND_REL_X = 0.03         # relative padding from axis
+LEGEND_REL_Y = 0.03
+TITLE_CM = 0.75             # added padding between subplots if title is present
+AX_LABEL_X_CM = 0.5         # x-label added padding
+AX_TICKS_X_CM = 0.5         # x-axis ticks added padding
+AX_LABEL_Y1_CM = 0.5        # primary y-label added padding
+AX_TICKS_Y1_CM = 1          # primary y-ticks added padding
+AX_LABEL_Y2_CM = 0.5        # secondary y-label added padding
+AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
+PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
 
-FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
-
+# ================ READ/PARSE CODE ================
 
 file = []
 path = FILE_PATH
@@ -261,7 +274,7 @@ while i < len(file):
     i += 1
 
 default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
-dims = (13,10)
+dims = DEFUALT_FIGSIZE
 file = "".join(file)
 namespace = {}
 #with open("test_run.py", "w") as f:
@@ -349,7 +362,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         if plt_no < 0:
             distr[abs(plt_no)]["secondary"] = []
         else:
-            distr[abs(plt_no)].update({"primary" : [], "labels" : [], "legends": [False, False]})
+            distr[abs(plt_no)].update({"primary" : [], "labels" : [], "legends": [False, False], "borders": [0,0,0,0]}) # borders: 0-left, 1-bottom, ...
 
         def find_def(k, vals):
             output = {}
@@ -374,8 +387,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     legend = True
                     ind = 1 * (plt_no < 0)
                     distr[abs(plt_no)]["legends"][ind] = True
-                if str(k) in ["xticks", "yticks"]:
-                    tck = str(k).removesuffix("s")
+                if str(k) in ["xticks", "yticks", "set_xticks", "set_yticks"]:
+                    tck = str(k).removesuffix("s").removeprefix("set_")
                     tns = ",".join([str(q).strip() for q in str(vals[0]).replace("[", r"{").replace("]", r"}").split(",")])
                     if len(tns) < 3:
                         tns = r"\empty"
@@ -383,15 +396,25 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     if len(vals) == 2:
                         tls = ",".join([str(q).strip().removeprefix("\'").removesuffix("\'") for q in str(vals[1]).strip("[ ]").split(",")])
                         output[tck + "labels"] = r"{" + tls + r"}"
+                elif str(k) in ["set_xticklabels", "set_yticklabels"]:
+                    axis = str(k).removeprefix("set_").removesuffix("ticklabels")
+                    if len(vals) == 1:
+                        if len(vals[0]) < 3:
+                            output[f"{axis}ticklabel"]=r"\empty"
+                        else:
+                            tcks = vals[0].replace("\'", "").replace("\"", "").strip("[]").split(", ")
+                            print(tcks)
+                            output[f"{axis}ticklabel"] = r"{" + ",".join(tcks) + r"}"                       
                 elif k == "grid":
                     output[k] = "both"
                 elif str(k).strip() == "set_size_inches":
-                    w, h = float(vals[0]), float(vals[1])
-                    w -= 0.9
-                    h -= 1.1
-                    w *= 2
-                    h *= 2
                     global dims
+                    w, h = float(vals[0]), float(vals[1])
+                    if not DIRECT_FIGSIZE:
+                        w -= 0.9
+                        h -= 1.1
+                        w *= 2
+                        h *= 2
                     dims = (w, h)
                 elif str(k).strip() in ["set_xscale", "set_yscale"]:
                     log_ax = str(k).strip().removeprefix("set_").removesuffix("scale")
@@ -446,19 +469,18 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                         except: continue
                                         v = (v[0], legend_pos_map[v[1]])
                                     posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
-                                    border = 0.03
                                     lx, ly = 0.5, 0.5
                                     if "north" in posit:
-                                        ly = 1 - border
+                                        ly = 1 - LEGEND_REL_Y
                                     elif "south" in posit:
-                                        ly = border
+                                        ly = LEGEND_REL_Y
                                     if "west" in posit:
-                                        lx = border
+                                        lx = LEGEND_REL_X
                                     elif "east" in posit:
-                                        lx = 1 - border                    
+                                        lx = 1 - LEGEND_REL_X                  
                                 output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"},"         
             except Exception as e:   
-                print(f"Napaka pri ukazu  {k}:{v}:{e}")    
+                print(f"Napaka pri ukazu  {k}:{e}")    
             return output
         
         gas = default_graph_arguments.copy()
@@ -735,9 +757,22 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         plots = "".join(plots)
         if plt_no < 0:
             distr[abs(plt_no)]["secondary"] = [graph_arguments,plots]
+            if "ylabel" in gas and gas["ylabel"]:
+                distr[abs(plt_no)]["borders"][2] += AX_LABEL_Y2_CM
+            if not("yticklabel" in gas and gas["yticklabel"] == r"\empty"):
+                distr[abs(plt_no)]["borders"][2] += AX_TICKS_Y2_CM
         else:
             distr[abs(plt_no)]["primary"] = [graph_arguments, plots]
-    
+            if "ylabel" in gas and gas["ylabel"]:
+                distr[abs(plt_no)]["borders"][0] += AX_LABEL_Y1_CM
+            if not("yticklabel" in gas and gas["yticklabel"] == r"\empty"):
+                distr[abs(plt_no)]["borders"][0] += AX_TICKS_Y1_CM
+            if "xlabel" in gas and gas["xlabel"]:
+                distr[abs(plt_no)]["borders"][1] += AX_LABEL_X_CM
+            if not("xticklabel" in gas and gas["xticklabel"] == r"\empty"):
+                distr[abs(plt_no)]["borders"][1] += AX_TICKS_X_CM
+            if "title" in gas and gas["title"]:
+                distr[abs(plt_no)]["borders"][3] += TITLE_CM 
     limit_grid = {}
     for pk in params.keys():
         if pk == "default": continue
@@ -751,14 +786,20 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     def adjust(x1,x2,d1,d2,axis_nm):
         if x1 == float("inf"):
             if f"log basis {axis_nm}" in gas.keys():
-                x1 = d1
+                if x1 > 0 and d1 > 0:
+                    x1 = 10**(math.log10(d1) - math.log10(d2/d1) * PLOT_AUTOPAD)
+                else:
+                    x1 = d1
             else:
-                x1 = d1 - (d2-d1) * 0.03
+                x1 = d1 - (d2-d1) * PLOT_AUTOPAD
         if x2 == float("-inf"):
             if "log basis {axis_nm}" in gas.keys():
-                x2 = d2
+                if x1 > 0 and d1 > 0:
+                    x2 = math.log10(d2) + math.log10(d2/d1) * PLOT_AUTOPAD
+                else:
+                    x2 = d2
             else:
-                x2 = d2 + (d2-d1) * 0.03
+                x2 = d2 + (d2-d1) * PLOT_AUTOPAD
         return x1,x2
     if xshare == 0:
         x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
@@ -887,6 +928,24 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     }""" + "\n"
     if len(distr.keys()) > 1:
         del(distr[0])
+
+    shifts = {}
+    for d in list(sorted(distr.keys())):
+        if d <= 0: continue
+        x,y,_,_=distr[d]["pos"]
+        if (x,y) not in shifts:
+            my = distr[y*int(shape[1])+x+1]["borders"]
+            shifts[(x,y)] = [my[2], my[3]]
+        if y > 0:
+            shifts[(x,y)][1] += distr[(y-1)*int(shape[1])+x+1]["borders"][1]
+        if x > 0:
+            shifts[(x,y)][1] += distr[y*int(shape[1])+x]["borders"][0]
+    xspaces = [0 for _ in range(int(shape[1]))]
+    yspaces = [0 for _ in range(int(shape[0]))]
+    for x in range(0,int(shape[1])):
+        for y in range(0,int(shape[0])):
+            xspaces[x] = max(xspaces[x], shifts[(x,y)][0])
+            yspaces[y] = max(yspaces[y], shifts[(x,y)][1])
     for d in list(sorted(distr.keys())):
         x, y, w, h = distr[d]["pos"]
         w *= dims[0]
@@ -896,11 +955,11 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if y > 0:
                 y -= 1
                 neigh = f"p{y*int(shape[1])+x+1}"
-                pos = r"at={("+neigh+r".south)}, anchor=north, yshift=-1.5cm," + "\n"
+                pos = r"at={("+neigh+r".south)}, anchor=north, yshift=-" + str(yspaces[y+1]) + r"cm," + "\n"
         else:
             x -= 1
             neigh = f"p{y*int(shape[1])+x+1}"
-            pos = r"at={("+neigh+r".east)}, anchor=west, xshift=2.5cm," + "\n"
+            pos = r"at={("+neigh+r".east)}, anchor=west, xshift=" + str(xspaces[x+1]) + r"cm," + "\n"
         if "primary" in distr[d].keys():
             dual = "secondary" in distr[d].keys()
             tikz_code += r"\begin{axis}["+ "\n"

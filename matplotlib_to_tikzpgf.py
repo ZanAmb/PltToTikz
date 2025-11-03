@@ -32,7 +32,7 @@ else:
         except:
             print("Error reading your file. Try again:")
 
-file.insert(0, "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n_axis_list=[]\n")
+file.insert(0, "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n_axis_list={}\n")
 i = 0
 plt_name = ""
 axis = {}
@@ -49,61 +49,133 @@ while i < len(file):
         i += 1
         continue
     if f"{plt_name}.subplots" in file[i]:
-        sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.+)\)\s*$", file[i]).groups())
+        sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.*)\)\s*$", file[i]).groups())
         spaces = sbplt_data[0]
         loc_fig = sbplt_data[1]
         axis[a_num]["fig"] = loc_fig
-        axs = sbplt_data[2].replace("(", "").replace(")", "").replace(" ", "").split(",")
+        nr = nc = 1
         if len(sbplt_data) == 4:
             tree = ast.parse(f"f({sbplt_data[3]})")
             call=tree.body[0].value
             args = [ast.unparse(arg) for arg in call.args]
             kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
             controls = ""
-            for arg in args:
+            for na in range(len(args)):
+                arg = args[na]
                 controls += f"str({arg}), "
+                if na == 0:
+                    nr = int(arg)
+                elif na == 1:
+                    nc = int(arg)
             for kwarg in kwargs:
                 spl = kwarg.split("=")
                 k, v = spl[0], "=".join(spl[1:])
+                if "nrows" in k:
+                    nr = int(v)
+                elif "ncols" in k:
+                    nc = int(v)
                 controls += f"(\"{k}\", str({v})), "
             controls = controls.removesuffix(", ")
             i += 1
             file.insert(i, spaces + f"_axis[\"default\"][\"geometry\"] = ({controls})\n")
+        ax_ref = sbplt_data[2]
+        depth = 0
+        current = ""
+        grid = {}
+        x,y=0,0
+        for a in ax_ref:
+            if a == "(":
+                depth += 1
+                x=0
+            elif a == ")":
+                if current:
+                    if y not in grid:
+                        grid[y] = {}
+                    grid[y][x] = current
+                    current = ""
+                depth -= 1
+                x=0
+            elif a == ",":
+                if current:
+                    if y not in grid:
+                        grid[y] = {}
+                    grid[y][x] = current
+                    current = ""
+                if depth == 1:
+                    y += 1
+                elif depth == 2:
+                    x += 1
+            elif a != " ":
+                current += a
+        axs = []
+        if grid:
+            if len(grid.keys()) == nr:
+                for y in grid.keys():                    
+                    prva = grid[y][0]
+                    if len(grid[y].keys()) == nc:
+                        for x in grid[y].keys():
+                            axs.append(grid[y][x])
+                    elif prva and prva.strip() != "_":
+                        for x in range(nc):
+                            axs.append(prva + f"[{x}]")
+            elif len(grid.keys()) == nc:
+                pass
+        else:
+            if nr * nc == 1:
+                axs = sbplt_data[2].replace("(", "").replace(")", "").replace(" ", "").split(",")
+            else:
+                for y in range(nr):
+                    if nc > 1:
+                        for x in range(nc):
+                            axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}][{x}]")
+                    else:
+                        axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}]")
         axis[a_num]["axis"] += axs
         for a in range(len(axs)):
             i += 1
             file.insert(i, spaces + f"_axis[\"{axs[a]}\"]="+"{\"datas\": [], \"cmds\": {}, \"plt_no\": "+ str(a+1) + "}\n")
     else:
-        for pn in [plt_name] + axis[a_num]["axis"] + [axis[a_num]["fig"]]:
-            if f"{pn}.show()" in file[i] or f"{pn}.savefig(" in file[i]:
-                spaces = re.search(r"^([\s\#]*)" + pn + r"\.", file[i]).groups()
+        if "." in file[i]:
+            row_name = file[i].split(".")[0].lstrip()
+            nme = row_name.split("[")[0]
+            indexs = ""
+            if "[" in row_name:
+                brackets = row_name.split("[")[1:]
+                for b in brackets:
+                    b = b.removesuffix("]")
+                    indexs += f"[{{{b}}}]"
+
+            row_cmd = file[i].split(".")[1].split("(")[0]
+
+            if row_cmd in ["show", "savefig"]:
+                spaces = re.search(r"^([\s\#]*)" + re.escape(row_name) + r"\.", file[i]).groups()
                 if spaces:
                     spaces = spaces[0]
                 else:
                     spaces = ""
                 fn = ""
-                if f"{pn}.savefig(" in file[i]:
+                if f"{row_name}.savefig(" in file[i]:
                     fn = file[i].split(".savefig(")[1].split(",")[0].replace("\"", "").replace("\'", "").replace(")", "").strip()
                     fn = ".".join(fn.split(".")[:-1])
                 elif r"#name:" in file[i-1]:
                     fn = file[i-1].split(r"#name:")[1].strip()
-                nme = pn
-                if pn == plt_name: nme = "default"
-                file.insert(i-1, spaces + f"_axis[\"{nme}\"][\"names\"] = \"{fn}\"\n")
-                i += 2
+                if row_name == plt_name: nme = "default"
+                i += 1
+                file.insert(i-1, spaces + f"_axis[f\"{nme + indexs}\"][\"names\"] = \"{fn}\"\n")
+                i += 1
                 file.insert(i, "\n")
                 i += 1
-                file.insert(i, spaces + f"_axis_list.append(_axis.copy())\n")
+                file.insert(i, spaces + f"_axis_list[{a_num}] = _axis.copy()\n")
                 i += 1
                 file.insert(i, spaces + "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n")
                 a_num += 1
                 axis[a_num] = {"axis" : [plt_name], "fig": None}
-            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem"]):
+            elif row_cmd in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem"]:
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
                 args = [ast.unparse(arg) for arg in call.args]
                 kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
-                spaces = list(re.search(r"^([\s\#]*)" + pn + r"\.([\w]+)\(", file[i]).groups())
+                spaces = list(re.search(r"^([\s\#]*)" + re.escape(row_name) + r"\.([\w]+)\(", file[i]).groups())
                 ptype = spaces[-1]
                 if len(spaces) == 2:
                     spaces = spaces[0]
@@ -118,16 +190,15 @@ while i < len(file):
                     k, v = spl[0], "=".join(spl[1:])
                     controls += f"(\"{k}\", str({v})), "
                 controls = controls.removesuffix(", ")
-                nme = pn
-                if pn == plt_name: nme = "default"
+                if nme == plt_name: nme, indexs = "default", ""
+                file.insert(i, spaces + f"_axis[f\"{nme + indexs}\"][\"datas\"].append([\"{ptype}\", {x}, {y}, {controls}])\n")
                 i += 1
-                file.insert(i, spaces + f"_axis[\"{nme}\"][\"datas\"].append([\"{ptype}\", {x}, {y}, {controls}])\n")
-            elif any(f"{pn}.{plttype}" in file[i] for plttype in ["vlines", "hlines", "axvline", "axhline"]):
+            elif row_cmd in ["vlines", "hlines", "axvline", "axhline"]:
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
                 args = [ast.unparse(arg) for arg in call.args]
                 kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
-                spaces = list(re.search(r"^([\s\#]*)" + pn + r"\.([\w]+)\(", file[i]).groups())
+                spaces = list(re.search(r"^([\s\#]*)" + re.escape(row_name) + r"\.([\w]+)\(", file[i]).groups())
                 ptype = spaces[-1]
                 if len(spaces) == 2:
                     spaces = spaces[0]
@@ -141,37 +212,52 @@ while i < len(file):
                     k, v = spl[0], "=".join(spl[1:])
                     controls += f"(\"{k}\", str({v})), "
                 controls = controls.removesuffix(", ")
-                nme = pn
-                if pn == plt_name: nme = "default"
+                if row_name == plt_name: nme = "default"
+                file.insert(i, spaces + f"_axis[f\"{nme + indexs}\"][\"datas\"].append([\"{ptype}\", {controls}])\n")
                 i += 1
-                file.insert(i, spaces + f"_axis[\"{nme}\"][\"datas\"].append([\"{ptype}\", {controls}])\n")
-            elif f"{pn}.twinx()" in file[i]:
-                groups = re.search(r"^([\s\#]*)([a-zA-Z0-9_]+)\s*=\s*" + pn + r"\.twinx\(\s*\)\s*$", file[i])
+            elif row_cmd == "twinx":
+                groups = re.search(r"^([\s\#]*)([a-zA-Z0-9_]+)\s*=\s*(\S+)\.twinx\(\s*\)\s*$", file[i])
+                print(groups)
                 if groups:
-                    spaces, new_axes = groups.group(1), groups.group(2)
+                    spaces, new_axes, row_nm = groups.group(1), groups.group(2), groups.group(3)
+                    row_name = file[i].split(".")[0].lstrip()
+                    nme = row_nm.split("[")[0]
+                    indexs = ""
+                    if "[" in row_nm:
+                        brackets = row_name.split("[")[1:]
+                        for b in brackets:
+                            b = b.removesuffix("]")
+                            indexs += f"[{{{b}}}]"
+
                     axis[a_num]["axis"] += [new_axes]
+                    file.insert(i, spaces + f"_axis[\"{new_axes}\"]="+"{\"datas\": [], \"cmds\": {}, \"plt_no\":" +  f"-_axis[f\"{nme + indexs}\"][\"plt_no\"]" + "}\n")
                     i += 1
-                    file.insert(i, spaces + f"_axis[\"{new_axes}\"]="+"{\"datas\": [], \"cmds\": {}, \"plt_no\":" +  f"-_axis[\"{pn}\"][\"plt_no\"]" + "}\n")
-            elif f"{pn}." in file[i]:
-                groups = re.search(r"^([\s\#]*)" + pn + r"\.([\w]+)\((.*)\)\s*$", file[i])
-                if groups:
-                    spaces, cmd, fargs = groups.group(1), groups.group(2), groups.group(3)
-                    tree = ast.parse(f"f({fargs})")
-                    call=tree.body[0].value
-                    args = [ast.unparse(arg) for arg in call.args]
-                    kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
-                    controls = ""
-                    for arg in args:
-                        controls += f"str({arg}), "
-                    for kwarg in kwargs:
-                        spl = kwarg.split("=")
-                        k, v = spl[0], "=".join(spl[1:])
-                        controls += f"(\"{k}\", str({v})), "
-                    controls = controls.removesuffix(", ")
-                    nme = pn
-                    if pn == plt_name or pn == axis[a_num]["fig"]: nme = "default"
-                    i += 1
-                    file.insert(i, spaces + f"_axis[\"{nme}\"][\"cmds\"][\"{cmd}\"] = [{controls}]\n")
+            else:
+                checked_names = []
+                for nm in [plt_name] + axis[a_num]["axis"] + [axis[a_num]["fig"]]:
+                    if not nm: continue
+                    nm = nm.split("[")[0]
+                    if nm in checked_names: continue
+                    else: checked_names.append(nm)
+                    if nm != nme: continue
+                    groups = re.search(r"^([\s\#]*)" + re.escape(row_name) + r"\.([\w]+)\((.*)\)\s*$", file[i])
+                    if groups:
+                        spaces, cmd, fargs = groups.group(1), groups.group(2), groups.group(3)
+                        tree = ast.parse(f"f({fargs})")
+                        call=tree.body[0].value
+                        args = [ast.unparse(arg) for arg in call.args]
+                        kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+                        controls = ""
+                        for arg in args:
+                            controls += f"str({arg}), "
+                        for kwarg in kwargs:
+                            spl = kwarg.split("=")
+                            k, v = spl[0], "=".join(spl[1:])
+                            controls += f"(\"{k}\", str({v})), "
+                        controls = controls.removesuffix(", ")
+                        if row_name == plt_name or row_name == axis[a_num]["fig"]: nme = "default"
+                        file.insert(i, spaces + f"_axis[f\"{nme + indexs}\"][\"cmds\"][\"{cmd}\"] = [{controls}]\n")
+                        i += 1
     i += 1
 
 default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
@@ -206,9 +292,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     limit_names = ["xmin", "xmax", "ymin", "ymax"]
     limits = { axnm: [None,None,None,None] for axnm in plt["axis"]}
     xshare, yshare = -1, -1
-    if len(axs_list) <= plt_num:
+    if plt_num in axs_list.keys():
+        params = axs_list[plt_num]
+    else:
         continue
-    params = axs_list[plt_num]
     distr = {0: {"pos" : (0,0,1,1)}} # x,y,rel w,rel h
     shape = [1,1]
     if "geometry" in params["default"].keys():
@@ -248,7 +335,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 else: arg = -1
                 if k.strip().removeprefix("share") == "x": xshare = arg
                 else: yshare = arg
-    
     for ax_name in plt["axis"]:
         if ax_name == plt_name: ax_name = "default"
         data = params[ax_name]
@@ -536,7 +622,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     lines[2].append(lines[2][-1])
                 for q in range(len(lines[0])):
                     points = ""
-                    if v:
+                    if vert:
                         points = f"{float(lines[0][q]), float(lines[1][q])}\n{float(lines[0][q]), float(lines[2][q])}"
                     else:
                         points = f"{float(lines[1][q]), float(lines[0][q])}\n{float(lines[2][q]), float(lines[0][q])}"
@@ -662,6 +748,18 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             limit_grid[y] = {}
         limit_grid[y][x] = limits[pk].copy()
     macros = []
+    def adjust(x1,x2,d1,d2,axis_nm):
+        if x1 == float("inf"):
+            if f"log basis {axis_nm}" in gas.keys():
+                x1 = d1
+            else:
+                x1 = d1 - (d2-d1) * 0.03
+        if x2 == float("-inf"):
+            if "log basis {axis_nm}" in gas.keys():
+                x2 = d2
+            else:
+                x2 = d2 + (d2-d1) * 0.03
+        return x1,x2
     if xshare == 0:
         x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
         for y in limit_grid.values():
@@ -675,10 +773,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     x2 = max(x2, float(p2))
-        if x1 == float("inf"):
-            x1 = d1 - (d2-d1) * 0.03
-        if x2 == float("-inf"):
-            x2 = d2 + (d2-d1) * 0.03
+        x1,x2=adjust(x1,x2,d1,d2,"x")
         macros.append(r"\pgfmathsetmacro{\xmin}{" + str(x1) + r"}")
         macros.append(r"\pgfmathsetmacro{\xmax}{" + str(x2) + r"}")
     if xshare == 1:
@@ -694,11 +789,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     x2 = max(x2, float(p2))
-            if x1 == float("inf"):
-                x1 = d1 - (d2-d1) * 0.03
+            x1,x2=adjust(x1,x2,d1,d2,"x")
             macros.append(r"\pgfmathsetmacro{\xmin" + chr(97+y) + r"}{" + str(x1) + r"}")
-            if x2 == float("-inf"):
-                x2 = d2 + (d2-d1) * 0.03
             macros.append(r"\pgfmathsetmacro{\xmax" + chr(97+y) + r"}{" + str(x2) + r"}")
     if xshare == 2:
         limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
@@ -714,11 +806,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     x2 = max(x2, float(p2))
-            if x1 == float("inf"):
-                x1 = d1 - (d2-d1) * 0.03
+            x1,x2=adjust(x1,x2,d1,d2,"x")
             macros.append(r"\pgfmathsetmacro{\xmin" + chr(97+x) + r"}{" + str(x1) + r"}")
-            if x2 == float("-inf"):
-                x2 = d2 + (d2-d1) * 0.03
             macros.append(r"\pgfmathsetmacro{\xmax" + chr(97+x) + r"}{" + str(x2) + r"}")
     if yshare == 0:
         y1, y2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
@@ -733,10 +822,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     y2 = max(y2, float(p2))
-        if y1 == float("inf"):
-            y1 = d1 - (d2-d1) * 0.03
-        if y2 == float("-inf"):
-            y2 = d2 + (d2-d1) * 0.03
+        y1,y2=adjust(y1,y2,d1,d2,"y")
         macros.append(r"\pgfmathsetmacro{\ymin}{" + str(y1) + r"}")
         macros.append(r"\pgfmathsetmacro{\ymax}{" + str(y2) + r"}")
     if yshare == 1:
@@ -752,11 +838,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     y2 = max(y2, float(p2))
-            if y1 == float("inf"):
-                y1 = d1 - (d2-d1) * 0.03
+            y1,y2=adjust(y1,y2,d1,d2,"y")
             macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+y) + r"}{" + str(y1) + r"}")
-            if y2 == float("-inf"):
-                y2 = d2 + (d2-d1) * 0.03
             macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+y) + r"}{" + str(y2) + r"}")
     if yshare == 2:
         limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
@@ -772,11 +855,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     d2 = max(d2, float(p2[1:]))
                 else:
                     y2 = max(y2, float(p2))
-            if y1 == float("inf"):
-                y1 = d1 - (d2-d1) * 0.03
+            y1,y2=adjust(y1,y2,d1,d2,"y")
             macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+x) + r"}{" + str(y1) + r"}")
-            if y2 == float("-inf"):
-                y2 = d2 + (d2-d1) * 0.03
             macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+x) + r"}{" + str(y2) + r"}")
 
             
@@ -816,7 +896,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if y > 0:
                 y -= 1
                 neigh = f"p{y*int(shape[1])+x+1}"
-                pos = r"at={("+neigh+r".south)}, anchor=north, yshift=-2.5cm," + "\n"
+                pos = r"at={("+neigh+r".south)}, anchor=north, yshift=-1.5cm," + "\n"
         else:
             x -= 1
             neigh = f"p{y*int(shape[1])+x+1}"

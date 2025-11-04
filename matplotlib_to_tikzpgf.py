@@ -928,24 +928,23 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     }""" + "\n"
     if len(distr.keys()) > 1:
         del(distr[0])
-
-    shifts = {}
-    for d in list(sorted(distr.keys())):
-        if d <= 0: continue
-        x,y,_,_=distr[d]["pos"]
-        if (x,y) not in shifts:
-            my = distr[y*int(shape[1])+x+1]["borders"]
-            shifts[(x,y)] = [my[2], my[3]]
-        if y > 0:
-            shifts[(x,y)][1] += distr[(y-1)*int(shape[1])+x+1]["borders"][1]
-        if x > 0:
-            shifts[(x,y)][1] += distr[y*int(shape[1])+x]["borders"][0]
-    xspaces = [0 for _ in range(int(shape[1]))]
-    yspaces = [0 for _ in range(int(shape[0]))]
-    for x in range(0,int(shape[1])):
-        for y in range(0,int(shape[0])):
-            xspaces[x] = max(xspaces[x], shifts[(x,y)][0])
-            yspaces[y] = max(yspaces[y], shifts[(x,y)][1])
+        shifts = {}
+        for d in list(sorted(distr.keys())):
+            if d <= 0: continue
+            x,y,_,_=distr[d]["pos"]
+            if (x,y) not in shifts:
+                my = distr[y*int(shape[1])+x+1]["borders"]
+                shifts[(x,y)] = [my[2], my[3]]
+            if y > 0:
+                shifts[(x,y)][1] += distr[(y-1)*int(shape[1])+x+1]["borders"][1]
+            if x > 0:
+                shifts[(x,y)][1] += distr[y*int(shape[1])+x]["borders"][0]
+        xspaces = [0 for _ in range(int(shape[1]))]
+        yspaces = [0 for _ in range(int(shape[0]))]
+        for x in range(0,int(shape[1])):
+            for y in range(0,int(shape[0])):
+                xspaces[x] = max(xspaces[x], shifts[(x,y)][0])
+                yspaces[y] = max(yspaces[y], shifts[(x,y)][1])
     for d in list(sorted(distr.keys())):
         x, y, w, h = distr[d]["pos"]
         w *= dims[0]

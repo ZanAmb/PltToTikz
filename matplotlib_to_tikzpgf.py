@@ -380,8 +380,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                             output[sp], output[zg] = vals
                         else:
                             output[sp], output[zg] = vals[0].strip("()").split(", ")
-                        limits[ax_name][limit_names.index(sp)] = output[sp]
-                        limits[ax_name][limit_names.index(zg)] = output[zg]
+                        if ax_name != "default":
+                            limits[ax_name][limit_names.index(sp)] = output[sp]
+                            limits[ax_name][limit_names.index(zg)] = output[zg]
                 if "legend" == str(k).strip():
                     global legend
                     legend = True

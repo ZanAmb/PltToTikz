@@ -612,7 +612,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if ptype == "errorbar":
                 error_string = r"error bars/.cd," + "\n"
                 error_string += f"x dir=both, x fixed={xfe},\n" if xfe else "x dir=both, x explicit,\n"  
-                error_string += f"x dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"  
+                error_string += f"y dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"  
                 style.append(error_string)
             elif "semilog" in ptype:
                 log_ax = ptype.strip().replace("semilog", "")

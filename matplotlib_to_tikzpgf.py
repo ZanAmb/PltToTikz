@@ -7,6 +7,8 @@ import math
 
 # ================ SETTINGS ================
 FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
+EXPORT_DATAPOINTS = False    # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
+DATAPOINTS_DIR = ""         # location of .dat file(-s) relative to FILE_PATH
 
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
 OVERRIDE_1000_SEP = ""      # use x for auto
@@ -143,6 +145,8 @@ while i < len(file):
                             axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}][{x}]")
                     else:
                         axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}]")
+        if not axs:
+            axs = sbplt_data[2].replace("(", "").replace(")", "").replace(" ", "").split(",")
         axis[a_num]["axis"] += axs
         for a in range(len(axs)):
             i += 1
@@ -301,6 +305,7 @@ anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "sou
 legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
 
 for plt_num in range(a_num):   # read and parse obtained commands into .tikz file(-s)
+    dat_count = 0
     plt = axis[plt_num]
     limit_names = ["xmin", "xmax", "ymin", "ymax"]
     limits = { axnm: [None,None,None,None] for axnm in plt["axis"]}
@@ -678,12 +683,12 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 if len(label) > 0:
                     if legend:
                         plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
-                
+            legend_entry_command = ""
             if len(label) > 0 and not cline:
                 if legend:
-                    plot += f"\\addlegendentry{{{label}}}"
+                    legend_entry_command = f"\\addlegendentry{{{label}}}"
                 else:
-                    plot += f"\\label{{{label}}}"
+                    legend_entry_command = f"\\label{{{label}}}"
                     distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
             elif not cline:
                 style.append("forget plot")
@@ -697,12 +702,13 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     ad_spec += f", {ac}={ac.replace(" ", "")}"
                     pts = [ac.replace(" ", "")] + list(ad_col[ac])
                     plot_points.append(pts)
-                plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{\n"
+                plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{"
+                content = ""
                 for i in range(len(x)):
                     for j in range(len(plot_points)):
                         try:
                             pp = plot_points[j][i]
-                            plot += "\t" + str(pp)
+                            content += "\t" + str(pp)
                             if i > 0:
                                 if j == 0:
                                     xmin = min(xmin, pp)
@@ -712,9 +718,25 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                     ymax = max(ymax, pp)
                         except Exception as e:
                             print(e)
-                            plot += "\t"
-                    plot += "\n"
-                plot += "};\n"
+                            content += "\t"
+                    content += "\n"
+                if EXPORT_DATAPOINTS:
+                    fn = params["default"]["names"]
+                    if not fn:
+                        fn = fn.split("/")[-1]
+                        fn = path.replace(".py", f"{plt_num}")
+                    fn += f"_tikzplot_dat{dat_count}.dat"                    
+                    dat_file = os.path.join(FILE_PATH, DATAPOINTS_DIR)
+                    if dat_file:
+                        os.makedirs(dat_file, exist_ok=True)
+                    dat_file = os.path.join(dat_file, fn)
+                    plot += dat_file
+                    with open(dat_file, "w") as dat:
+                        dat.write(content)
+                    dat_count += 1
+                else:
+                    plot += "\n" + content
+                plot += "};\n" + legend_entry_command
                 plots.append(plot)
                 plot = ""
         if ax_name != "default":
@@ -939,7 +961,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if y > 0:
                 shifts[(x,y)][1] += distr[(y-1)*int(shape[1])+x+1]["borders"][1]
             if x > 0:
-                shifts[(x,y)][1] += distr[y*int(shape[1])+x]["borders"][0]
+                shifts[(x,y)][0] += distr[y*int(shape[1])+x]["borders"][0]
         xspaces = [0 for _ in range(int(shape[1]))]
         yspaces = [0 for _ in range(int(shape[0]))]
         for x in range(0,int(shape[1])):

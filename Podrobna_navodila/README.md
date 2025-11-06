@@ -22,10 +22,11 @@ Podprte nastavitve:
 - izbira markerja (ni še vseh opcij) in velikost,
 - debelina črte,
 - barva grafa,
+- shranjevanje podatkov v ločene datoteke.
 
 Nekatere (še) nepodprte nastavitve:
 - 3D grafi,
-- prikaz matrik, spektrogramov,
+- prikaz matrik, spektrogramov, histogramov,
 - barvne sheme,
 - ...
 
@@ -91,7 +92,7 @@ Pri shranjevanju se ohrani ime, končnica pa se zamenja. V primeru uporabe `plt.
 | `ax.set_yticks([...])`, `ax.set_yticklabels([...])` |Točke na osi y in njihova imena |
 
 ---
-LEGENDA: Pri dvojnih oseh je težko narediti enotno legendo v Pythonu, zato v primeru, da vsaj na eni od osi kličete `legend()`, LaTeX verzija grafa prikaže vse poimenovane grafe (vse s parametrom `label`). Pozor: grafi sekundarne osi lahko prečkajo legendo primarne. Ročno koordiante nastavimo kot `loc=(x,y)`, kjer podamo relativne koordinate levega spodnjega kota na intervalu [0,1].
+LEGENDA: Pri dvojnih oseh je težko narediti enotno legendo v Pythonu, zato v primeru, da vsaj na eni od osi kličete `legend()`, LaTeX verzija grafa prikaže vse poimenovane grafe (vse s parametrom `label`). Pozor: grafi sekundarne osi lahko prečkajo legendo primarne. Ročno koordiante nastavimo kot `loc=(x,y)`, kjer podamo relativne koordinate levega spodnjega kota na intervalu [0,1]. Če uporabljate dvojno legendo, prenešene oznake ne podpirajo matematičnega načina (\label{} ga ne sprejme).
 
 Demonstracijski primer (brez ročnih popravkov, v0.5, koda spodaj):
 <img width="775" height="750" alt="image" src="https://github.com/user-attachments/assets/bbe8e4ab-93c8-4398-afae-1d78fe9ca02b" />
@@ -105,6 +106,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

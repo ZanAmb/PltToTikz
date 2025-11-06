@@ -7,7 +7,7 @@ import math
 
 # ================ SETTINGS ================
 FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
-EXPORT_DATAPOINTS = False    # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
+EXPORT_DATAPOINTS = False   # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
 DATAPOINTS_DIR = ""         # location of .dat file(-s) relative to FILE_PATH
 
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
@@ -234,7 +234,6 @@ while i < len(file):
                 i += 1
             elif row_cmd == "twinx":
                 groups = re.search(r"^([\s\#]*)([a-zA-Z0-9_]+)\s*=\s*(\S+)\.twinx\(\s*\)\s*$", file[i])
-                print(groups)
                 if groups:
                     spaces, new_axes, row_nm = groups.group(1), groups.group(2), groups.group(3)
                     row_name = file[i].split(".")[0].lstrip()
@@ -306,6 +305,7 @@ legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower righ
 
 for plt_num in range(a_num):   # read and parse obtained commands into .tikz file(-s)
     dat_count = 0
+    lab_count = 0
     plt = axis[plt_num]
     limit_names = ["xmin", "xmax", "ymin", "ymax"]
     limits = { axnm: [None,None,None,None] for axnm in plt["axis"]}
@@ -367,7 +367,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         if plt_no < 0:
             distr[abs(plt_no)]["secondary"] = []
         else:
-            distr[abs(plt_no)].update({"primary" : [], "labels" : [], "legends": [False, False], "borders": [0,0,0,0]}) # borders: 0-left, 1-bottom, ...
+            distr[abs(plt_no)].update({"primary" : [], "labels" : {}, "legends": [False, False], "borders": [0,0,0,0]}) # borders: 0-left, 1-bottom, ...
 
         def find_def(k, vals):
             output = {}
@@ -660,8 +660,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     if legend:
                         plots[-1] += f"\\addlegendentry{{{label}}}"
                     else:
-                        plots[-1] += f"\\label{{{label}}}"
-                        distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
+                        plots[-1] += f"\\label{{lab{lab_count}}}"
+                        distr[abs(plt_no)]["labels"][lab_count] = (label, plt_no < 0)
+                        lab_count += 1
                 
             elif ptype in ["axvline", "axhline"]:
                 arbit = [0,0,1]
@@ -688,8 +689,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 if legend:
                     legend_entry_command = f"\\addlegendentry{{{label}}}"
                 else:
-                    legend_entry_command = f"\\label{{{label}}}"
-                    distr[abs(plt_no)]["labels"].append((label, plt_no < 0))
+                    legend_entry_command = f"\\label{{lab{lab_count}}}"
+                    distr[abs(plt_no)]["labels"][lab_count] = (label, plt_no < 0)
+                    lab_count += 1
             elif not cline:
                 style.append("forget plot")
             style = ",\n".join(style)
@@ -992,10 +994,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 tikz_code += r"axis y line*=left," + "\n"
             tikz_code += distr[d]["primary"][0] + "]\n"
             tikz_code += distr[d]["primary"][1] + "\n"
-            for l in distr[d]["labels"]:
-                lab, sec = l
+            for l in distr[d]["labels"].keys():
+                lab, sec = distr[d]["labels"][l]
                 if sec and distr[d]["legends"][0]:
-                    tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "},\n"
+                    tikz_code += r"\addlegendimage{/pgfplots/refstyle=lab" + str(l) + r"}\addlegendentry{" + lab + "},\n"
             tikz_code += r"\end{axis}" + "\n"
             if dual:
                 tikz_code += r"\begin{axis}["+ "\n"
@@ -1003,10 +1005,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 tikz_code += r"axis y line*=right, axis x line=none," + "\n"
                 tikz_code += r"at={(" + f"p{d}" +r".south west)}, anchor=south west, y label style={at={(1.1,0.5)}, rotate=180},"
                 tikz_code += distr[d]["secondary"][0] + "]\n"
-                for l in distr[d]["labels"]:
-                    lab, sec = l
+                for l in distr[d]["labels"].keys():
+                    lab, sec = distr[d]["labels"][l]
                     if not sec and distr[d]["legends"][1]:
-                        tikz_code += r"\addlegendimage{/pgfplots/refstyle=" + lab + r"}\addlegendentry{" + lab + "},\n"
+                        tikz_code += r"\addlegendimage{/pgfplots/refstyle=lab" + str(l) + r"}\addlegendentry{" + lab + "},\n"
                 tikz_code += distr[d]["secondary"][1] + "\n"
                 tikz_code += r"\end{axis}" + "\n"
     tikz_code += r"\end{tikzpicture}"

@@ -49,9 +49,11 @@ Podroben nabor podprtih ukazov:
 | `axhline(y=0, xmin=0, xmax=1, **kwargs)` | Vodoravna črta, limite podane relativno glede na os [0,1]*|
 | `vlines(x, ymin, ymax, **kwargs)` | Navpične črte|
 | `hlines(y, xmin, xmax, **kwargs)` | Vodoravne črte|
+| `imshow(array, **kwargs)` | Prikaz slik/spektrogramov**|
 
 ---
 *Skupna legenda dvojnih osi za to ni podprta, rišite na tisti osi, na kateri nato kličete `legend()`. Relativne skale se slabo računajo za majhne vrednosti (če je skala pri vrednostih $10^{-5}$ ali manjše).
+**Meje osi je potrebno nastaviti vnaprej. V Pythonovem predogledu bodo nato manjkale. Program izvozi notranjo sliko v trenutku, ko kličete `imshow()`, osi morajo zato ostati nespremenjene, da se bodo ujemale tudi v LaTeX-u.
 
 | Matplotlib Keyword | Opis, opombe |
 |:-------------------|:--------------------------|
@@ -106,6 +108,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

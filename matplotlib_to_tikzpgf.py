@@ -8,7 +8,7 @@ import math
 # ================ SETTINGS ================
 FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
 EXPORT_DATAPOINTS = False   # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
-DATAPOINTS_DIR = ""         # location of .dat file(-s) relative to FILE_PATH
+DATAPOINTS_DIR = ""         # location of .dat file(-s) relative to FILE_PATH, also the path for imshow() image saving
 
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
 OVERRIDE_1000_SEP = ""      # use x for auto
@@ -52,6 +52,7 @@ i = 0
 plt_name = ""
 axis = {}
 a_num = 0
+imshow_count = 0
 while not plt_name and i < len(file):
     if "import matplotlib.pyplot" in file[i]:
         q = file[i].split(" as ")
@@ -187,6 +188,42 @@ while i < len(file):
                 file.insert(i, spaces + "_axis = {\"default\": {\"datas\": [], \"cmds\": {}, \"plt_no\": 0}}\n")
                 a_num += 1
                 axis[a_num] = {"axis" : [plt_name], "fig": None}
+            elif row_cmd == "imshow":
+                tree = ast.parse(file[i].strip())
+                call = tree.body[0].value
+                args = [ast.unparse(arg) for arg in call.args]
+                kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+                spaces = list(re.search(r"^([\s\#]*)" + re.escape(row_name) + r"\.([\w]+)\(", file[i]).groups())
+                ptype = spaces[-1]
+                if len(spaces) == 2:
+                    spaces = spaces[0]
+                else:
+                    spaces = ""
+                controls = ""
+                x = args.pop(0)
+                for arg in args:
+                    controls += f"str({arg}), "
+                for kwarg in kwargs:
+                    spl = kwarg.split("=")
+                    k, v = spl[0], "=".join(spl[1:])
+                    controls += f"(\"{k}\", str({v})), "
+                controls = controls.removesuffix(", ")
+                if row_name == plt_name: nme = "default"
+                i += 1
+                file.insert(i, spaces + re.escape(row_name) + ".axis(\"off\")\n")
+                i += 1
+                im_dir = os.path.join(FILE_PATH, DATAPOINTS_DIR)
+                if im_dir:
+                    os.makedirs(im_dir, exist_ok=True)
+                im_show_path = os.path.join(FILE_PATH, DATAPOINTS_DIR, f"imshow{imshow_count}.pdf")
+                file.insert(i, spaces + re.escape(row_name) + f".savefig(\"{im_show_path}\", bbox_inches=\"tight\", pad_inches=0)\n")
+                tree = ast.parse(file[i].strip())
+                call = tree.body[0].value
+                args = [ast.unparse(arg) for arg in call.args]
+                kwargs = [f"{kw.arg}={ast.unparse(kw.value)}" for kw in call.keywords]
+                i += 1
+                file.insert(i, spaces + f"_axis[f\"{nme + indexs}\"][\"datas\"].append([\"{ptype}\", [len({x}), len({x}[0])], {controls}, \"{im_show_path}\"])\n")
+                imshow_count += 1
             elif row_cmd in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem"]:
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
@@ -422,7 +459,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         w *= 2
                         h *= 2
                     dims = (w, h)
-                elif str(k).strip() in ["set_xscale", "set_yscale"]:
+                elif str(k).strip() in ["set_xscale", "set_yscale", "xscale", "yscale"]:
                     log_ax = str(k).strip().removeprefix("set_").removesuffix("scale")
                     if vals[0].strip() == "log":
                         base = 10
@@ -518,6 +555,33 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             ad_col = {}
             xfe, yfe = 0, 0
             cline = ptype in ["vlines", "hlines", "axvline", "axhline"]
+            if ptype == "imshow":
+                gas.update({"enlargelimits": "false"})
+                imshow_num = p.pop()
+                shape = p.pop(0)
+                bounds = [0, shape[1], 0, shape[0]]
+                for arg in p:
+                    if arg[0] == "extent":
+                        exts = arg[1].strip("[]")
+                        if "," in exts: bounds = exts.split(",")
+                        else: bounds = exts.split()
+                        xm, xM, ym, yM = bounds
+                        if "ymode" in gas and gas["ymode"]=="log":
+                            if float(ym) <= 0: ym = 1
+                        if "xmode" in gas and gas["xmode"]=="log":
+                            if float(xm) <= 0: xm = 1
+                for l in range(len(limit_names)):
+                    if limit_names[l] not in gas:
+                        gas[limit_names[l]] = bounds[l]
+                    else:
+                        bounds[l] = gas[limit_names[l]]
+                xm, xM, ym, yM = bounds
+                plot += r"\addplot graphics[" + "\n"
+                plot += f"xmin={xm}, xmax={xM}, ymin={ym}, ymax={yM},\n"
+                plot += r"] {" + imshow_num + r"};" + "\n"
+                
+                plots.append(plot)             
+                continue
             for arg in p[2:]:
                 try:
                     if isinstance(arg, tuple):

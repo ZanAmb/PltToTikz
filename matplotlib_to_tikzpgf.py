@@ -17,11 +17,11 @@ DEFUALT_FIGSIZE = (13,10)   # default size setting in cm
 LEGEND_REL_X = 0.03         # relative padding from axis
 LEGEND_REL_Y = 0.03
 TITLE_CM = 0.75             # added padding between subplots if title is present
-AX_LABEL_X_CM = 0.5         # x-label added padding
+AX_LABEL_X_CM = 0.6         # x-label added padding
 AX_TICKS_X_CM = 0.5         # x-axis ticks added padding
-AX_LABEL_Y1_CM = 0.5        # primary y-label added padding
+AX_LABEL_Y1_CM = 0.6        # primary y-label added padding
 AX_TICKS_Y1_CM = 1          # primary y-ticks added padding
-AX_LABEL_Y2_CM = 0.5        # secondary y-label added padding
+AX_LABEL_Y2_CM = 0.6        # secondary y-label added padding
 AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
 PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
 
@@ -781,10 +781,14 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{"
                 content = ""
                 for i in range(len(x)):
+                    line = ""
+                    valid = True
                     for j in range(len(plot_points)):
                         try:
                             pp = plot_points[j][i]
-                            content += "\t" + str(pp)
+                            line += "\t" + str(pp)
+                            if pp in ["NaN", None, "None"]:
+                                valid = False
                             if i > 0:
                                 if j == 0:
                                     xmin = min(xmin, pp)
@@ -793,9 +797,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                     ymin = min(ymin, pp)
                                     ymax = max(ymax, pp)
                         except Exception as e:
-                            print(e)
+                            print(f"Bad value: {pp}, ignoring. Error: {e}")
                             content += "\t"
-                    content += "\n"
+                    if valid:
+                        content += line + "\n"
                 if EXPORT_DATAPOINTS:
                     fn = params["default"]["names"]
                     if not fn:
@@ -999,12 +1004,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+x) + r"}{" + str(y1) + r"}")
             macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+x) + r"}{" + str(y2) + r"}")
 
-            
-
-
-        
-    
-
     # put it together
     tikz_code = r"""\begin{tikzpicture}""" + "\n" + "\n".join(macros)
     tikz_code += r"""\newcommand{\DrawHline}[4]{
@@ -1091,5 +1090,5 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         fn = os.path.join(os.path.dirname(path), fn + ".tikz")
     else:
         fn = path.replace(".py", f"{plt_num}.tikz")
-    with open(fn, "w") as f:
+    with open(fn, "w", encoding="utf-8") as f:
         f.write(tikz_code)

@@ -512,6 +512,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                         except: continue
                                         v = (v[0], legend_pos_map[v[1]])
                                     posit = " ".join([anchor_map[k] for k in anchor_map if k in v[1]])
+                                    if "center" in posit:
+                                        if "north" in posit or "south" in posit:
+                                            posit = posit.replace("center", "")
                                     lx, ly = 0.5, 0.5
                                     if "north" in posit:
                                         ly = 1 - LEGEND_REL_Y

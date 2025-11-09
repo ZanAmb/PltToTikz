@@ -446,7 +446,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                             output[f"{axis}ticklabel"]=r"\empty"
                         else:
                             tcks = vals[0].replace("\'", "").replace("\"", "").strip("[]").split(", ")
-                            print(tcks)
                             output[f"{axis}ticklabel"] = r"{" + ",".join(tcks) + r"}"                       
                 elif k == "grid":
                     output[k] = "both"
@@ -558,6 +557,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             ad_col = {}
             xfe, yfe = 0, 0
             cline = ptype in ["vlines", "hlines", "axvline", "axhline"]
+            num_args = 2
+            if ptype in ["axvline", "axhline"]: num_args = 1
             if ptype == "imshow":
                 gas.update({"enlargelimits": "false"})
                 imshow_num = p.pop()
@@ -585,7 +586,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 
                 plots.append(plot)             
                 continue
-            for arg in p[2:]:
+            for arg in p[num_args:]:
+                if isinstance(arg, list): continue
                 try:
                     if isinstance(arg, tuple):
                         k, v = str(arg[0]).strip(), arg[1]

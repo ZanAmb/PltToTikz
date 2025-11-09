@@ -712,13 +712,18 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     lines[1].append(lines[1][-1])
                 while len(lines[2]) < len(lines[0]):
                     lines[2].append(lines[2][-1])
+                if not label:
+                    style.append("forget plot")
                 for q in range(len(lines[0])):
                     points = ""
                     if vert:
                         points = f"{float(lines[0][q]), float(lines[1][q])}\n{float(lines[0][q]), float(lines[2][q])}"
                     else:
                         points = f"{float(lines[1][q]), float(lines[0][q])}\n{float(lines[2][q]), float(lines[0][q])}"
-                    if q > 0: plots.append(f"\n\\addplot[{",".join(style)}, forget plot] coordinates {{{points}}};")
+                    if q > 0: 
+                        style.append("forget plot")
+                        style =list(set(style))
+                        plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
                     else: plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
                 if len(label) > 0:
                     if legend:

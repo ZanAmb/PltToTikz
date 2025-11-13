@@ -718,7 +718,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 while len(lines[2]) < len(lines[0]):
                     lines[2].append(lines[2][-1])
                 if not label:
-                    style.append("forget plot")
+                    style.insert(0,"forget plot")
                 for q in range(len(lines[0])):
                     points = ""
                     if vert:
@@ -726,7 +726,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     else:
                         points = f"{float(lines[1][q]), float(lines[0][q])}\n{float(lines[2][q]), float(lines[0][q])}"
                     if q > 0: 
-                        style.append("forget plot")
+                        style.insert(0,"forget plot")
                         style =list(set(style))
                         plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
                     else: plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
@@ -767,7 +767,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     distr[abs(plt_no)]["labels"][lab_count] = (label, plt_no < 0)
                     lab_count += 1
             elif not cline:
-                style.append("forget plot")
+                style.insert(0,"forget plot")
             style = ",\n".join(style)
             if not cline:
                 x = ["x"] + list(p[0])

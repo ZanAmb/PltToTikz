@@ -939,10 +939,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             macros.append(r"\pgfmathsetmacro{\xmax" + chr(97+y) + r"}{" + str(x2) + r"}")
     if xshare == 2:
         limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
-        for x in limit_grid.keys():
+        for x in limit_grid[0].keys():
             x1, x2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
-            for y in limit_grid[x].values():
-                p1,p2,_,_=y
+            for y in limit_grid.keys():
+                p1,p2,_,_=limit_grid[y][x]
                 if "d" in p1:
                     d1 = min(d1, float(p1[1:]))
                 else:
@@ -988,10 +988,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+y) + r"}{" + str(y2) + r"}")
     if yshare == 2:
         limit_grid_t = {inner_key: {outer_key: inner_dict[inner_key] for outer_key, inner_dict in limit_grid.items() if inner_key in inner_dict}for inner_key in {k for inner_dict in limit_grid.values() for k in inner_dict}}
-        for x in limit_grid.keys():
+        for x in limit_grid[0].keys():
             y1, y2, d1, d2 = float("inf"), float("-inf"), float("inf"), float("-inf")
-            for y in limit_grid[x].values():
-                _,_, p1, p2=y
+            for y in limit_grid.keys():
+                _,_, p1, p2=limit_grid[y][x]
                 if "d" in p1:
                     d1 = min(d1, float(p1[1:]))
                 else:

@@ -1,4 +1,4 @@
-# v0.6 development
+# v0.7 development
 
 import re
 import ast      # pip install astor
@@ -224,7 +224,7 @@ while i < len(file):
                 i += 1
                 file.insert(i, spaces + f"_axis[f\"{nme + indexs}\"][\"datas\"].append([\"{ptype}\", [len({x}), len({x}[0])], {controls}, \"{im_show_path}\"])\n")
                 imshow_count += 1
-            elif row_cmd in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem"]:
+            elif row_cmd in ["plot", "scatter", "errorbar", "semilogx", "semilogy", "loglog", "stem", "bar"]:
                 tree = ast.parse(file[i].strip())
                 call = tree.body[0].value
                 args = [ast.unparse(arg) for arg in call.args]
@@ -589,6 +589,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             for arg in p[num_args:]:
                 if isinstance(arg, list): continue
                 try:
+                    fmt_set = None
                     if isinstance(arg, tuple):
                         k, v = str(arg[0]).strip(), arg[1]
                         if "label" in k:
@@ -652,23 +653,32 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                         ad_col[descriptor] = subs[1].split(",")
                                     else:
                                         ad_col[descriptor] = subs[1].split()
-
+                        elif "fmt" in k:
+                            if v == "none":
+                                mark=""
+                                style.append("draw=none")
+                            else:
+                                fmt_set = v
+                        elif "width" in k and ptype == "bar":
+                            style.append(f"bar width={str(v)}")
+                        if fmt_set == None:
+                            continue
+                    if fmt_set: arg = fmt_set
+                    if arg in color_map.values():
+                        color = arg
+                        marker = False
                     else:
-                        if arg in color_map.values():
-                            color = arg
-                            marker = False
-                        else:
-                            color = next((color_map[c] for c in arg if c in color_map), None)
-                            marker = next((marker_map[m] for m in arg if m in marker_map), None)
-                        if "." in str(marker) and mark_size == -1:
-                            mark_size = 1 
-                        line = next((line_map[m] for m in line_map if m in arg), None)
-                        if color:
-                            col = color
-                        if marker:
-                            mark = marker
-                        if line:
-                            style.append(f"{line}")
+                        color = next((color_map[c] for c in arg if c in color_map), None)
+                        marker = next((marker_map[m] for m in arg if m in marker_map), None)
+                    if "." in str(marker) and mark_size == -1:
+                        mark_size = 1 
+                    line = next((line_map[m] for m in line_map if m in arg), None)
+                    if color:
+                        col = color
+                    if marker:
+                        mark = marker
+                    if line:
+                        style.append(f"{line}")
                 except Exception as e:
                     print(f"Napaka pri ukazu  {ptype}:{arg}:{e}")
 
@@ -758,6 +768,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 if len(label) > 0:
                     if legend:
                         plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
+            elif ptype == "bar":
+                style.insert(0, "bar width=1")
+                style.insert(0, "fill=blue!40")
+                style.insert(0, "ybar")
             legend_entry_command = ""
             if len(label) > 0 and not cline:
                 if legend:

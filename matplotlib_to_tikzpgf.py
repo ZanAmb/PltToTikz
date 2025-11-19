@@ -770,7 +770,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     if legend:
                         plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
             elif ptype == "bar":
-                style.insert(0, "bar width=1")
                 style.insert(0, "fill=blue!40")
                 style.insert(0, "ybar")
             legend_entry_command = ""

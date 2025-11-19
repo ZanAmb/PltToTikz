@@ -660,6 +660,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                             else:
                                 fmt_set = v
                         elif "width" in k and ptype == "bar":
+                            gas.update({"enlargelimits": "false"})
                             style.append(f"bar width={str(v)}")
                         if fmt_set == None:
                             continue

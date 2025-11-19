@@ -50,6 +50,7 @@ Podroben nabor podprtih ukazov:
 | `vlines(x, ymin, ymax, **kwargs)` | Navpične črte|
 | `hlines(y, xmin, xmax, **kwargs)` | Vodoravne črte|
 | `imshow(array, **kwargs)` | Prikaz slik/spektrogramov**. Trenutno podprto le za samostojne grafe, ne deluje na subplots(), prav tako trenutno še ni podprto izvažanje več imshow() znotraj zanke.|
+| `bar(x, y, **kwargs)` | Histogram. Trenutno podprti kwarg: width, barva le privzeta modra.|
 
 ---
 *Ne delujejo pravilno v primeru večih grafov. Skupna legenda dvojnih osi za to ni podprta, rišite na tisti osi, na kateri nato kličete `legend()`. Relativne skale se slabo računajo za majhne vrednosti (če je skala pri vrednostih $10^{-5}$ ali manjše).
@@ -109,6 +110,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

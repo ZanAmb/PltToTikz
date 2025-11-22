@@ -316,7 +316,7 @@ while i < len(file):
 default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
 dims = DEFUALT_FIGSIZE
 file = "".join(file)
-namespace = {"__name__": "__main__"}
+namespace = {"__name__": "__main__", "__builtins__": __builtins__}
 #with open("test_run.py", "w") as f:
 #    f.write(str(file))
 exec(file, namespace)

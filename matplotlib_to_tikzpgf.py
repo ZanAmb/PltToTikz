@@ -604,7 +604,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         elif "linewidth" in k:
                             style.append(f"line width={v}pt")
                         elif "linestyle" in k:
-                            if v == "":
+                            if v == "" or "None" in v:
                                 style.append("only marks")
                             elif v in line_map.keys():
                                 style.append(line_map[v])

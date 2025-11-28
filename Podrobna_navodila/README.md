@@ -28,7 +28,7 @@ Podprte nastavitve:
 
 Nekatere (še) nepodprte nastavitve:
 - 3D grafi,
-- prikaz histogramov, filč-between grafov,
+- prikaz fill-between grafov,
 - barvne sheme,
 - ...
 
@@ -46,13 +46,13 @@ Podroben nabor podprtih ukazov:
 | `semilogx(x, y, **kwargs)` | Logaritemska x skala |
 | `semilogy(x, y, **kwargs)` | Logaritemska y skala |
 | `loglog(x, y, **kwargs)` | Logaritemski obe skali |
-| `stem(x, y, **kwargs)` | Točke, povezane z x-osjo|
+| `stem(x, y, **kwargs)` | Točke, povezane z x/y-osjo|
 | `axvline(x=0, ymin=0, ymax=1, **kwargs)` | Navpična črta, limite podane relativno glede na os [0,1]*|
 | `axhline(y=0, xmin=0, xmax=1, **kwargs)` | Vodoravna črta, limite podane relativno glede na os [0,1]*|
 | `vlines(x, ymin, ymax, **kwargs)` | Navpične črte|
 | `hlines(y, xmin, xmax, **kwargs)` | Vodoravne črte|
 | `imshow(array, **kwargs)` | Prikaz slik/spektrogramov**. Trenutno podprto le za samostojne grafe, ne deluje na subplots(), prav tako trenutno še ni podprto izvažanje več imshow() znotraj zanke.|
-| `bar(x, y, **kwargs)` | Histogram. Trenutno podprti kwarg: width, barva le privzeta modra.|
+| `bar(x, y, **kwargs)` | Histogram. Trenutno podprti kwarg: width, color.|
 
 ---
 *Ne delujejo pravilno v primeru večih grafov. Skupna legenda dvojnih osi za to ni podprta, rišite na tisti osi, na kateri nato kličete `legend()`. Relativne skale se slabo računajo za majhne vrednosti (če je skala pri vrednostih $10^{-5}$ ali manjše).
@@ -112,6 +112,7 @@ Demonstarcijski primer (privzete barve, v0.3):
 <img width="1000" height="675" alt="GrafUklon0" src="https://github.com/user-attachments/assets/0685f035-f40b-46b0-9ca0-fa4c54275148" />
 
 <img width="1000" height="606" alt="image" src="https://github.com/user-attachments/assets/2b7b8c96-1ca5-4ddf-a2d5-92b3c9d7d1cf" />
+
 
 
 

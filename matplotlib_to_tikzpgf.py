@@ -351,6 +351,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
     limit_names = ["xmin", "xmax", "ymin", "ymax"]
     limits = { axnm: [None,None,None,None] for axnm in plt["axis"]}
     xshare, yshare = -1, -1
+    ax_v_def, ax_h_def = False, False
     if plt_num in axs_list.keys():
         params = axs_list[plt_num]
     else:
@@ -779,8 +780,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         arbit[q] = p[q]
                 if "v" in ptype:
                     plots.append(f"\n\\DrawVline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
+                    ax_v_def = True
                 else:
                     plots.append(f"\n\\DrawHline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
+                    ax_h_def = True
                 if len(label) > 0:
                     if legend:
                         plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
@@ -1032,26 +1035,27 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             macros.append(r"\pgfmathsetmacro{\ymin" + chr(97+x) + r"}{" + str(y1) + r"}")
             macros.append(r"\pgfmathsetmacro{\ymax" + chr(97+x) + r"}{" + str(y2) + r"}")
 
-    # put it together
     tikz_code = r"""\begin{tikzpicture}""" + "\n" + "\n".join(macros)
-    tikz_code += r"""\newcommand{\DrawHline}[4]{
-    \pgfplotsextra{
-    \pgfkeysgetvalue{/pgfplots/xmin}\xmin
-    \pgfkeysgetvalue{/pgfplots/xmax}\xmax
-    \pgfmathsetmacro{\xstartval}{\xmin + (#2)*( \xmax - \xmin )}
-    \pgfmathsetmacro{\xendval}{\xmin + (#3)*( \xmax - \xmin )}
-    }
-    \draw[#4] (axis cs:\xstartval,#1) -- (axis cs:\xendval,#1);
-    }
-    \newcommand{\DrawVline}[4]{
-    \pgfplotsextra{
-    \pgfkeysgetvalue{/pgfplots/ymin}\ymin
-    \pgfkeysgetvalue{/pgfplots/ymax}\ymax
-    \pgfmathsetmacro{\ystartval}{\ymin + (#2)*( \ymax - \ymin )}
-    \pgfmathsetmacro{\yendval}{\ymin + (#3)*( \ymax - \ymin )}
-    }
-    \draw[#4] (axis cs:#1,\ystartval) -- (axis cs:#1,\yendval);
-    }""" + "\n"
+    if ax_h_def:
+        tikz_code += r"""\newcommand{\DrawHline}[4]{
+        \pgfplotsextra{
+        \pgfkeysgetvalue{/pgfplots/xmin}\xmin
+        \pgfkeysgetvalue{/pgfplots/xmax}\xmax
+        \pgfmathsetmacro{\xstartval}{\xmin + (#2)*( \xmax - \xmin )}
+        \pgfmathsetmacro{\xendval}{\xmin + (#3)*( \xmax - \xmin )}
+        }
+        \draw[#4] (axis cs:\xstartval,#1) -- (axis cs:\xendval,#1);
+        }""" + "\n"
+    if ax_v_def:
+        tikz_code += r"""\newcommand{\DrawVline}[4]{
+        \pgfplotsextra{
+        \pgfkeysgetvalue{/pgfplots/ymin}\ymin
+        \pgfkeysgetvalue{/pgfplots/ymax}\ymax
+        \pgfmathsetmacro{\ystartval}{\ymin + (#2)*( \ymax - \ymin )}
+        \pgfmathsetmacro{\yendval}{\ymin + (#3)*( \ymax - \ymin )}
+        }
+        \draw[#4] (axis cs:#1,\ystartval) -- (axis cs:#1,\yendval);
+        }""" + "\n"
     if len(distr.keys()) > 1:
         del(distr[0])
         shifts = {}

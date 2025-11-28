@@ -5,6 +5,7 @@ import ast      # pip install astor
 import os
 import math
 
+
 # ================ SETTINGS ================
 FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
 EXPORT_DATAPOINTS = False   # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
@@ -25,7 +26,10 @@ AX_LABEL_Y2_CM = 0.6        # secondary y-label added padding
 AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
 PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
 
+DEV_MODE = False
+
 # ================ READ/PARSE CODE ================
+if DEV_MODE: import traceback
 
 file = []
 path = FILE_PATH
@@ -415,7 +419,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         for v in vals:
                             s = str(v[0]).strip().replace("left", "min").replace("bottom", "min").replace("right", "max").replace("top", "max")
                             output[k[0]+s]=v[1]
-                            limits[ax_name][limit_names.index(k[0]+s)] = v[1]
+                            if ax_name != "default":
+                                limits[ax_name][limit_names.index(k[0]+s)] = v[1]
                     else:
                         sp, zg = str(k).replace("lim", "min"), str(k).replace("lim", "max")
                         if len(vals) == 2:
@@ -525,7 +530,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                         lx = 1 - LEGEND_REL_X                  
                                 output["legend style"] = r"{at={(" + f"{lx},{ly}" + r")}, anchor=" + posit + r"},"         
             except Exception as e:   
-                print(f"Napaka pri ukazu  {k}:{e}")    
+                print(f"Napaka pri ukazu  {k}:{e}")
+                if DEV_MODE: print(traceback.format_exc())   
             return output
         
         gas = default_graph_arguments.copy()
@@ -554,6 +560,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             style = []
             mark_size = -1
             mark = ""
+            stem_horizontal = False
             ad_col = {}
             xfe, yfe = 0, 0
             cline = ptype in ["vlines", "hlines", "axvline", "axhline"]
@@ -662,6 +669,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         elif "width" in k and ptype == "bar":
                             gas.update({"enlargelimits": "false"})
                             style.append(f"bar width={str(v)}")
+                        elif "orientation" in k and ptype == "stem":
+                            if "horizontal" in v:
+                                stem_horizontal = True
                         if fmt_set == None:
                             continue
                     if fmt_set: arg = fmt_set
@@ -691,6 +701,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if col == None:
                 col = hex_to_pgf(default_colors[len(dci)]) # ALTN: dci.count(ptype)
                 dci.append(ptype)
+            if ptype == "bar":
+                style.insert(0, f"fill={col}")
             style.append(f"color={col}")
             if ptype == "scatter":
                 style.append("only marks")
@@ -710,7 +722,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 gas[f"ymode"] = "log"
                 gas[f"log basis y"] = str(10)
             elif ptype == "stem":
-                style.append("ycomb")
+                if stem_horizontal:
+                    style.append("xcomb")
+                else:
+                    style.append("ycomb")
             elif ptype in ["vlines", "hlines"]:
                 s = 0
                 while s < len(style):
@@ -770,7 +785,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     if legend:
                         plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
             elif ptype == "bar":
-                style.insert(0, "fill=blue!40")
                 style.insert(0, "ybar")
             legend_entry_command = ""
             if len(label) > 0 and not cline:

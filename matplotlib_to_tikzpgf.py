@@ -325,8 +325,9 @@ default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
 dims = DEFUALT_FIGSIZE
 file = "".join(file)
 namespace = {"__name__": "__main__", "__builtins__": __builtins__}
-#with open("test_run.py", "w") as f:
-#    f.write(str(file))
+if DEV_MODE:
+    with open("test_run.py", "w") as f:
+        f.write(str(file))
 exec(file, namespace)
 axs_list = namespace["_axis_list"]
 #with open("test_run.txt", "w") as f:
@@ -613,16 +614,16 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                             if "." in str(arg) and mark_size == -1:
                                 mark_size = 1 
                             mark = marker
-                        elif "linewidth" in k:
+                        elif "linewidth" in k or k == "lw":
                             style.append(f"line width={v}pt")
-                        elif "linestyle" in k:
+                        elif "linestyle" in k or k == "ls":
                             if v == "" or "None" in v:
                                 style.append("only marks")
                             elif v in line_map.keys():
                                 style.append(line_map[v])
                             elif v in line_map.values():
                                 style.append(v)
-                        elif "markersize" in k:
+                        elif "markersize" in k or k == "ms":
                             mark_size = f"{v/2:.f}"
                         elif "color" in k:
                             if v in color_map.keys():

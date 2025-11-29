@@ -622,7 +622,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         elif "linewidth" in k or k == "lw":
                             style.append(f"line width={v}pt")
                         elif "linestyle" in k or k == "ls":
-                            if v == "" or "None" in v:
+                            if v == "" or "None" in v or "none" in v:
                                 style.append("only marks")
                             elif v in line_map.keys():
                                 style.append(line_map[v])
@@ -719,8 +719,9 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 style.append("only marks")
             if ptype == "errorbar":
                 error_string = r"error bars/.cd," + "\n"
+                error_string += r"error bar style={solid},"+"\n"
                 error_string += f"x dir=both, x fixed={xfe},\n" if xfe else "x dir=both, x explicit,\n"  
-                error_string += f"y dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"  
+                error_string += f"y dir=both, y fixed={yfe},\n" if yfe else "y dir=both, y explicit,"
                 style.append(error_string)
             elif "semilog" in ptype:
                 log_ax = ptype.strip().replace("semilog", "")

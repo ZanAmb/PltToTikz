@@ -68,6 +68,10 @@ while i < len(file):
     if len(strpd) == 0 or strpd[0] == "#":
         i += 1
         continue
+    if "def " in file[i].lstrip():
+        file.insert(i+1, file[i].split("def")[0] + "\tglobal _axis\n")
+        file.insert(i+1, file[i].split("def")[0] + "\tglobal _axis_list\n")
+        i += 2
     if f"{plt_name}.subplots" in file[i]:
         sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.*)\)\s*$", file[i]).groups())
         spaces = sbplt_data[0]

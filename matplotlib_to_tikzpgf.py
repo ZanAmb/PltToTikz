@@ -69,8 +69,13 @@ while i < len(file):
         i += 1
         continue
     if "def " in file[i].lstrip():
-        file.insert(i+1, file[i].split("def")[0] + "\tglobal _axis\n")
-        file.insert(i+1, file[i].split("def")[0] + "\tglobal _axis_list\n")
+        qi = 1
+        while file[i+qi].lstrip() in ["#", "r\"", "\"",] or len(file[i+qi].strip()) < 1:
+            qi += 1
+            print(qi)
+        indent = file[i+qi][:len(file[i+qi]) - len(file[i+qi].lstrip())]
+        file.insert(i+1, indent + "global _axis\n")
+        file.insert(i+2, indent + "global _axis_list\n")
         i += 2
     if f"{plt_name}.subplots" in file[i]:
         sbplt_data = list(re.search(r"^([\s\#]*)([a-zA-Z0-9_]*),(.*)=\s*" + plt_name + r"\.subplots\((.*)\)\s*$", file[i]).groups())

@@ -10,6 +10,7 @@ import math
 FILE_PATH = ""              # if emtpy, terminal will ask you for .py to convert
 EXPORT_DATAPOINTS = False   # store coordinate tables in separate .dat file(-s) instead of storing them in main .tikz file(-s)
 DATAPOINTS_DIR = ""         # location of .dat file(-s) relative to FILE_PATH, also the path for imshow() image saving
+DATA_ONLY = False           # change only datapoints - as exported (should be used only to update data, which was already exported, will not create/modify .tikz file with plot settings). This option is meant for updating the data while keeping manual changes to the plot settings in .tikz file
 
 OVERRIDE_DECIMAL_SEP = ","  # leave empty for auto
 OVERRIDE_1000_SEP = ""      # use x for auto
@@ -1132,5 +1133,6 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
         fn = os.path.join(os.path.dirname(path), fn + ".tikz")
     else:
         fn = path.replace(".py", f"{plt_num}.tikz")
-    with open(fn, "w", encoding="utf-8") as f:
-        f.write(tikz_code)
+    if not DATA_ONLY:
+        with open(fn, "w", encoding="utf-8") as f:
+            f.write(tikz_code)

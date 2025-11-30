@@ -72,7 +72,6 @@ while i < len(file):
         qi = 1
         while file[i+qi].lstrip() in ["#", "r\"", "\"",] or len(file[i+qi].strip()) < 1:
             qi += 1
-            print(qi)
         indent = file[i+qi][:len(file[i+qi]) - len(file[i+qi].lstrip())]
         file.insert(i+1, indent + "global _axis\n")
         file.insert(i+2, indent + "global _axis_list\n")

@@ -1079,7 +1079,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
             if y > 0:
                 shifts[(x,y)][1] += distr[(y-1)*int(shape[1])+x+1]["borders"][1]
             if x > 0:
-                shifts[(x,y)][0] += distr[y*int(shape[1])+x]["borders"][0]
+                shifts[(x,y)][0] += distr[y*int(shape[1])+x+1]["borders"][0]
         xspaces = [0 for _ in range(int(shape[1]))]
         yspaces = [0 for _ in range(int(shape[0]))]
         for x in range(0,int(shape[1])):

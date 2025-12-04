@@ -1,2 +1,3 @@
 subplots(sharey): opazil, da avtomatično (brez vsaj ene limite) ne deluje, x naj bi delal, verjetno je problem v kakšnem indeksu.
 ticklabels \symbol: kljub oznaki kot raw in znotraj math-mode-a v latex zabeleži dvojni \ (\\symbol), potrebno bo preveriti escape-e.
+axvline/axhline: v log načinu ne deluje pravilno (nastavitev razpona na osi).

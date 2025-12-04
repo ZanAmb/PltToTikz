@@ -19,13 +19,16 @@ DEFUALT_FIGSIZE = (13,10)   # default size setting in cm
 LEGEND_REL_X = 0.03         # relative padding from axis
 LEGEND_REL_Y = 0.03
 TITLE_CM = 0.75             # added padding between subplots if title is present
-AX_LABEL_X_CM = 0.6         # x-label added padding
+AX_LABEL_X_CM = 0.7         # x-label added padding
 AX_TICKS_X_CM = 0.5         # x-axis ticks added padding
 AX_LABEL_Y1_CM = 0.6        # primary y-label added padding
 AX_TICKS_Y1_CM = 1          # primary y-ticks added padding
 AX_LABEL_Y2_CM = 0.6        # secondary y-label added padding
 AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
 PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
+
+DOWNSAMPLING = 2            # downsample plot points (requires numpy installed): 0 - off, 1 - take every n-th, 2 - smart downsample by 2D distance (donwsample regions with points close together)
+MAX_POINTS_PER_PLOT = 1000  # to be used with DOWNSAMPLING, max. number of points per plot command
 
 DEV_MODE = False
 
@@ -822,6 +825,39 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     plot_points.append(pts)
                 plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{"
                 content = ""
+                if DOWNSAMPLING and MAX_POINTS_PER_PLOT < len(x):
+                    import numpy as np
+                    if DOWNSAMPLING == 1:
+                        skip = len(x) // MAX_POINTS_PER_PLOT + 1
+                        mask = [False] * len(x)
+                        mask[0] = True
+                        mask[1::skip] = [True] * len(mask[1::skip])
+                    elif DOWNSAMPLING == 2:
+                        xn = np.asarray(x[1:], dtype=float)
+                        yn = np.asarray(y[1:], dtype=float)
+                        mask_num = np.ones(len(xn), dtype=bool)
+                        while mask_num.sum() > MAX_POINTS_PER_PLOT:
+                            xs = xn[mask_num]
+                            ys = yn[mask_num]
+                            if len(xs) < 3: break
+                            dx = np.diff(xs)
+                            dy = np.diff(ys)
+                            dist = np.hypot(dx, dy)
+                            med = np.median(dist)
+                            dense = dist < med
+                            rm_rel = np.where(dense)[0][1::2]
+                            if len(rm_rel) == 0: break
+                            abs_idx = np.flatnonzero(mask_num)
+                            rm_abs = abs_idx[rm_rel]
+                            if mask_num.sum() - len(rm_abs) <= MAX_POINTS_PER_PLOT:
+                                rm_abs = rm_abs[:mask_num.sum() - MAX_POINTS_PER_PLOT]
+                            mask_num[rm_abs] = False
+                        mask = [True] + mask_num.tolist()
+                    for k in range(len(plot_points)):
+                        col = plot_points[k]
+                        plot_points[k] = [v for v, keep in zip(col, mask) if keep]
+                    x = plot_points[0]
+                    y = plot_points[1]
                 for i in range(len(x)):
                     line = ""
                     valid = True

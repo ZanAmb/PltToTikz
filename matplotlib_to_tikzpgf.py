@@ -835,6 +835,16 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     elif DOWNSAMPLING == 2:
                         xn = np.asarray(x[1:], dtype=float)
                         yn = np.asarray(y[1:], dtype=float)
+                        if "xmode" in gas and gas["xmode"] == "log":
+                            bse = 10
+                            if "log basis x":
+                                bse = float(gas["log basis x"])
+                            xn = np.log10(xn) / np.log10(bse)
+                        if "ymode" in gas and gas["ymode"] == "log":
+                            bse = 10
+                            if "log basis y":
+                                bse = float(gas["log basis y"])
+                            yn = np.log10(yn) / np.log10(bse)
                         mask_num = np.ones(len(xn), dtype=bool)
                         while mask_num.sum() > MAX_POINTS_PER_PLOT:
                             xs = xn[mask_num]

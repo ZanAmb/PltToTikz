@@ -330,7 +330,6 @@ while i < len(file):
     i += 1
 
 default_graph_arguments = {}#{"width": "13cm", "height": "10cm"}
-dims = DEFUALT_FIGSIZE
 file = "".join(file)
 namespace = {"__name__": "__main__", "__builtins__": __builtins__}
 if DEV_MODE:
@@ -358,6 +357,7 @@ anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "sou
 legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
 
 for plt_num in range(a_num):   # read and parse obtained commands into .tikz file(-s)
+    dims = DEFUALT_FIGSIZE
     dat_count = 0
     lab_count = 0
     plt = axis[plt_num]

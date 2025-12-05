@@ -27,7 +27,8 @@ AX_LABEL_Y2_CM = 0.6        # secondary y-label added padding
 AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
 PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
 
-FILTER = True               # Remove points outside plot limits (if set), requires numpy installed)
+FILTER = True               # remove points outside plot limits (if set), requires numpy installed. Note that in case of scattered points, some lines (connecting two discontinuities) passing the plot might appear
+FILTER_PAD = True           # when removing outer points, keep the neighbors (so that line continues to the plot limit instead of ending)
 DOWNSAMPLING = 2            # downsample plot points (requires numpy installed): 0 - off, 1 - take every n-th, 2 - smart downsample by 2D distance (donwsample regions with points close together)
 MAX_POINTS_PER_PLOT = 1000  # to be used with DOWNSAMPLING, max. number of points per plot command
 
@@ -841,7 +842,10 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         minus  = np.concatenate(([False], a[:-1]))
                         plus = np.concatenate((a[1:], [False]))
                         return a | minus | plus
-                    accept = expand_1d(accept_x) & expand_1d(accept_y)
+                    if FILTER_PAD:
+                        accept = expand_1d(accept_x) & expand_1d(accept_y)
+                    else:
+                        accept = accept_x & accept_y
                     plot_points = [[row[0]] + list(np.array(row[1:])[accept]) for row in plot_points]
                 if DOWNSAMPLING and MAX_POINTS_PER_PLOT < len(x):
                     import numpy as np

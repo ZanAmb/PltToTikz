@@ -27,6 +27,7 @@ AX_LABEL_Y2_CM = 0.6        # secondary y-label added padding
 AX_TICKS_Y2_CM = 1          # secondary y-ticks added padding
 PLOT_AUTOPAD = 0.03         # percent of axis extended when shared axis are used and limit is not specified
 
+FILTER = True               # Remove points outside plot limits (if set), requires numpy installed)
 DOWNSAMPLING = 2            # downsample plot points (requires numpy installed): 0 - off, 1 - take every n-th, 2 - smart downsample by 2D distance (donwsample regions with points close together)
 MAX_POINTS_PER_PLOT = 1000  # to be used with DOWNSAMPLING, max. number of points per plot command
 
@@ -825,6 +826,23 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     plot_points.append(pts)
                 plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{"
                 content = ""
+                if FILTER:
+                    import numpy as np
+                    set_limits = [-float("inf"), float("inf"), -float("inf"), float("inf")]
+                    limit_names = ["xmin", "xmax", "ymin", "ymax"]
+                    for i in range(len(limit_names)):
+                        if limit_names[i] in gas:
+                            set_limits[i] = float(gas[limit_names[i]])
+                    xn = np.array(x[1:], dtype=float)
+                    yn = np.array(y[1:], dtype=float)
+                    accept_x = (xn > set_limits[0]) & (xn < set_limits[1])
+                    accept_y = (yn > set_limits[2]) & (yn < set_limits[3])
+                    def expand_1d(a):
+                        minus  = np.concatenate(([False], a[:-1]))
+                        plus = np.concatenate((a[1:], [False]))
+                        return a | minus | plus
+                    accept = expand_1d(accept_x) & expand_1d(accept_y)
+                    plot_points = [[row[0]] + list(np.array(row[1:])[accept]) for row in plot_points]
                 if DOWNSAMPLING and MAX_POINTS_PER_PLOT < len(x):
                     import numpy as np
                     if DOWNSAMPLING == 1:

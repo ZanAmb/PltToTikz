@@ -160,8 +160,12 @@ while i < len(file):
             else:
                 for y in range(nr):
                     if nc > 1:
-                        for x in range(nc):
-                            axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}][{x}]")
+                        if nr > 1:
+                            for x in range(nc):
+                                axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}][{x}]")
+                        else:
+                            for x in range(nc):
+                                axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{x}]")
                     else:
                         axs.append(sbplt_data[2].split(",")[0].strip("[ ]") + f"[{y}]")
         if not axs:
@@ -355,6 +359,18 @@ except: pass
     #if OVERRIDE_DECIMAL_SEP:
     #    default_graph_arguments["xticklabel"] = default_graph_arguments["yticklabel"] = r"{\pgfmathprintnumber[assume math mode=true, dec sep={" + decimal_sep + r"}]{\tick}}"
 
+def correct_latex(sa):
+    math_mode = False
+    sl = ""
+    for i in range(len(sa)):
+        s = sa[i]
+        if s == "$": math_mode = not math_mode
+        if not math_mode:
+            if s == "_" and i > 0 and sa[i-1] != "\\":
+                sl += "\\"
+        sl += s
+    return sl
+
 anchor_map = {"top": "north", "bottom": "south", "upper": "north", "lower": "south", "left": "west", "right": "east", "center": "center"}
 legend_pos_map = ["best", "upper right", "upper left", "lower_left", "lower right", "right", "center left", "center right", "lower center", "upper center", "center"]
 
@@ -505,7 +521,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                                 if "loc" in v[0]:
                                     output[f"{k} style"] = r"{anchor=" + anchor_map[v[1]] + r"}"
                             else:
-                                output[k] = r"{" + v + r"}"
+                                output[k] = r"{" + correct_latex(v) + r"}"
                         elif str(k).strip() == "figure":
                             if v[0].strip() == "figsize":
                                 dims = re.search(r"\(\s*(\S+)\s*\,\s*(\S+)\s*\)", v[1])
@@ -775,7 +791,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     else: plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
                 if len(label) > 0:
                     if legend:
-                        plots[-1] += f"\\addlegendentry{{{label}}}"
+                        plots[-1] += f"\\addlegendentry{{{correct_latex(label)}}}"
                     else:
                         plots[-1] += f"\\label{{lab{lab_count}}}"
                         distr[abs(plt_no)]["labels"][lab_count] = (label, plt_no < 0)
@@ -802,13 +818,13 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     ax_h_def = True
                 if len(label) > 0:
                     if legend:
-                        plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{label}}}"
+                        plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{correct_latex(label)}}}"
             elif ptype == "bar":
                 style.insert(0, "ybar")
             legend_entry_command = ""
             if len(label) > 0 and not cline:
                 if legend:
-                    legend_entry_command = f"\\addlegendentry{{{label}}}"
+                    legend_entry_command = f"\\addlegendentry{{{correct_latex(label)}}}"
                 else:
                     legend_entry_command = f"\\label{{lab{lab_count}}}"
                     distr[abs(plt_no)]["labels"][lab_count] = (label, plt_no < 0)
@@ -909,7 +925,7 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                         except Exception as e:
                             print(f"Bad value: {pp}, ignoring. Error: {e}")
                             content += "\t"
-                    if valid:
+                    if valid and len(line.strip()) > 0:
                         content += line + "\n"
                 if EXPORT_DATAPOINTS:
                     fn = params["default"]["names"]

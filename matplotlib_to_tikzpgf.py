@@ -838,8 +838,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                 plot_points = [x,y]
                 ad_spec = ""
                 for ac in ad_col.keys():
-                    ad_spec += f", {ac}={ac.replace(" ", "")}"
-                    pts = [ac.replace(" ", "")] + list(ad_col[ac])
+                    ad_spec += f", {ac}={ac.replace(' ', '')}"
+                    pts = [ac.replace(' ', '')] + list(ad_col[ac])
                     plot_points.append(pts)
                 plot += f"\n\\addplot [{style}] table [x=x,y=y{ad_spec}] {{"
                 content = ""

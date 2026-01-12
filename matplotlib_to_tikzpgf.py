@@ -787,8 +787,8 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     if q > 0: 
                         style.insert(0,"forget plot")
                         style =list(set(style))
-                        plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
-                    else: plots.append(f"\n\\addplot[{",".join(style)}] coordinates {{{points}}};")
+                        plots.append(f"\n\\addplot[{','.join(style)}] coordinates {{{points}}};")
+                    else: plots.append(f"\n\\addplot[{','.join(style)}] coordinates {{{points}}};")
                 if len(label) > 0:
                     if legend:
                         plots[-1] += f"\\addlegendentry{{{correct_latex(label)}}}"
@@ -811,14 +811,14 @@ for plt_num in range(a_num):   # read and parse obtained commands into .tikz fil
                     else:
                         arbit[q] = p[q]
                 if "v" in ptype:
-                    plots.append(f"\n\\DrawVline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
+                    plots.append(f"\n\\DrawVline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{','.join(style)}}}")
                     ax_v_def = True
                 else:
-                    plots.append(f"\n\\DrawHline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{",".join(style)}}}")
+                    plots.append(f"\n\\DrawHline{{{arbit[0]}}}{{{arbit[1]}}}{{{arbit[2]}}}{{{','.join(style)}}}")
                     ax_h_def = True
                 if len(label) > 0:
                     if legend:
-                        plots[-1] += f"\\addlegendimage{{{", ".join(style)}}}\\addlegendentry{{{correct_latex(label)}}}"
+                        plots[-1] += f"\\addlegendimage{{{', '.join(style)}}}\\addlegendentry{{{correct_latex(label)}}}"
             elif ptype == "bar":
                 style.insert(0, "ybar")
             legend_entry_command = ""
